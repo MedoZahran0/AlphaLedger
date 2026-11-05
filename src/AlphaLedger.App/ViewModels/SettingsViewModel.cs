@@ -1,0 +1,127 @@
+using System.IO;
+using System.Windows;
+using AlphaLedger.App.Localization;
+using AlphaLedger.App.Services;
+using AlphaLedger.Core;
+using AlphaLedger.Core.Abstractions;
+using AlphaLedger.Core.Exceptions;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace AlphaLedger.App.ViewModels;
+
+public partial class SettingsViewModel : ObservableObject
+{
+    private readonly ISettingsService _settings;
+    private readonly ICompanyFolderService _folders;
+    private readonly WindowsFolderPicker _picker;
+    private readonly WindowsDialogService _dialogs;
+    private readonly IAppPaths _paths;
+    private readonly AppDataRelocationService _relocation;
+
+    public SettingsViewModel(
+        ISettingsService settings,
+        ICompanyFolderService folders,
+        WindowsFolderPicker picker,
+        WindowsDialogService dialogs,
+        IAppPaths paths,
+        AppDataRelocationService relocation)
+    {
+        _settings = settings;
+        _folders = folders;
+        _picker = picker;
+        _dialogs = dialogs;
+        _paths = paths;
+        _relocation = relocation;
+        DatabasePath = _paths.DatabasePath;
+        AppDataPath = _paths.DataDirectory;
+        LocalizationService.Instance.CultureChanged += OnCultureChanged;
+
+        SelectedLanguage = LocalizationService.Instance.CurrentCulture.Name;
+    }
+
+    [ObservableProperty] private string? _documentRoot;
+    [ObservableProperty] private string _databasePath = string.Empty;
+    [ObservableProperty] private string _appDataPath = string.Empty;
+    [ObservableProperty] private string _selectedLanguage;
+    [ObservableProperty] private string _currentUserName = string.Empty;
+    [ObservableProperty] private string _currentUserRole = string.Empty;
+    [ObservableProperty] private string? _status;
+
+    public event Action? IdentityChanged;
+
+    [RelayCommand]
+    public async Task LoadAsync()
+    {
+        DocumentRoot = _paths.IsPortableMode ? _paths.ApplicationRoot : string.Empty;
+
+        var savedLang = await _settings.GetAsync(SettingKeys.SelectedLanguage);
+        SelectedLanguage = LocalizationService.NormalizeCultureName(savedLang);
+
+        CurrentUserName = await _settings.GetAsync(SettingKeys.CurrentUserName) ?? Environment.UserName;
+        CurrentUserRole = await _settings.GetAsync(SettingKeys.CurrentUserRole)
+            ?? LocalizationService.Instance.GetString("CurrentUserRole");
+
+        Status = LocalizationService.Instance.GetString(
+            string.IsNullOrWhiteSpace(DocumentRoot) ? "SettingsDocumentsNotSelected" : "SettingsSettingsLoaded");
+    }
+
+    [RelayCommand]
+    public void Browse()
+    {
+        var selected = _picker.PickFolder(LocalizationService.Instance.GetString("SettingsPickDocumentFolder"), DocumentRoot);
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            DocumentRoot = selected;
+        }
+    }
+
+    [RelayCommand]
+    public async Task SaveAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(DocumentRoot))
+            {
+                throw new BusinessException("Please select a document storage folder first.");
+            }
+
+            _folders.EnsureDocumentRoot(DocumentRoot);
+            await _settings.SetAsync(SettingKeys.SelectedLanguage, LocalizationService.NormalizeCultureName(SelectedLanguage));
+            await _settings.SetAsync(SettingKeys.CurrentUserName,
+                string.IsNullOrWhiteSpace(CurrentUserName) ? null : CurrentUserName.Trim());
+            await _settings.SetAsync(SettingKeys.CurrentUserRole,
+                string.IsNullOrWhiteSpace(CurrentUserRole) ? null : CurrentUserRole.Trim());
+            var databasePath = await _relocation.RelocateAsync(DocumentRoot);
+
+            LocalizationService.Instance.SetLanguage(SelectedLanguage);
+            IdentityChanged?.Invoke();
+
+            Status = LocalizationService.Instance.GetString("SettingsSettingsSaved");
+            _dialogs.Info($"تم نقل الأرشيف وقاعدة البيانات إلى المجلد المحدد. أعد تشغيل البرنامج لاستخدام المسار الجديد.\nقاعدة البيانات: {databasePath}");
+        }
+        catch (Exception ex)
+        {
+            _dialogs.Error(ex.Message);
+        }
+    }
+
+    partial void OnSelectedLanguageChanged(string value)
+    {
+        LocalizationService.Instance.SetLanguage(value);
+    }
+
+    partial void OnDocumentRootChanged(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+        AppDataPath = Path.Combine(value, "System", "Data");
+        DatabasePath = Path.Combine(AppDataPath, "alpha-ledger.db");
+    }
+
+    private void OnCultureChanged()
+    {
+        if (Status is not null)
+            Status = LocalizationService.Instance.TranslateMessage(Status);
+    }
+}

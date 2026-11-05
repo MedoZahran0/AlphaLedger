@@ -1,0 +1,114 @@
+<UserControl x:Class="AlphaLedger.App.Views.StaffView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:loc="clr-namespace:AlphaLedger.App.Localization"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="1050"
+             FlowDirection="{loc:FlowDirection}"
+             loc:LocalizationExtensions.BindFlowDirection="True">
+    <Grid Background="#F4F6F8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,0,0,1" Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource StaffTitle}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                    <TextBlock Text="{DynamicResource StaffSubtitle}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="{DynamicResource CommonDelete}" Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding DeleteCommand}" MinWidth="100" Margin="0,0,8,0"/>
+                    <Button Content="{DynamicResource StaffRefresh}" Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding LoadCommand}" MinWidth="100"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Add employee form -->
+        <Border Grid.Row="1" Background="#EEF2F6" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,0,0,1" Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="240"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="240"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{DynamicResource StaffName}" VerticalAlignment="Center" FontWeight="SemiBold"
+                           Foreground="{StaticResource NavyBrush}" Margin="0,0,8,0"/>
+                <TextBox Grid.Column="1" Text="{Binding NewEmployeeName, UpdateSourceTrigger=PropertyChanged}"
+                         VerticalContentAlignment="Center" Margin="0,0,16,0"
+                         ToolTip="{DynamicResource StaffNamePlaceholder}"/>
+
+                <TextBlock Grid.Column="2" Text="{DynamicResource StaffJobTitle}" VerticalAlignment="Center" FontWeight="SemiBold"
+                           Foreground="{StaticResource NavyBrush}" Margin="0,0,8,0"/>
+                <TextBox Grid.Column="3" Text="{Binding NewEmployeeJobTitle, UpdateSourceTrigger=PropertyChanged}"
+                         VerticalContentAlignment="Center" Margin="0,0,16,0"
+                         ToolTip="{DynamicResource StaffJobTitlePlaceholder}"/>
+
+                <Button Grid.Column="4" Content="{DynamicResource StaffAdd}" Style="{StaticResource PrimaryButtonStyle}"
+                        Command="{Binding AddCommand}" MinWidth="120" Height="28"/>
+            </Grid>
+        </Border>
+
+        <!-- Employees list -->
+        <DataGrid Grid.Row="2" ItemsSource="{Binding Employees}" SelectedItem="{Binding SelectedEmployee, Mode=TwoWay}"
+                  Margin="12" Background="White" AutoGenerateColumns="False" IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{DynamicResource StaffHeaderName}" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="{DynamicResource StaffHeaderJobTitle}" Binding="{Binding JobTitle}" Width="220"/>
+                <DataGridTemplateColumn Header="{DynamicResource StaffHeaderStatus}" Width="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="2" Padding="6,2" HorizontalAlignment="Center">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#E6F4EA"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                <Setter Property="Background" Value="#FCE8E6"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="11" FontWeight="SemiBold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="{DynamicResource CompaniesStatusActive}"/>
+                                            <Setter Property="Foreground" Value="#137333"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                    <Setter Property="Text" Value="{DynamicResource CompaniesStatusArchived}"/>
+                                                    <Setter Property="Foreground" Value="#C5221F"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Footer -->
+        <Border Grid.Row="3" Background="#EEF2F6" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,1,0,0" Padding="12,6">
+            <TextBlock Text="{Binding StatusMessage}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource NavyBrush}"/>
+        </Border>
+    </Grid>
+</UserControl>

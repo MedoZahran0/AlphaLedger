@@ -1,0 +1,110 @@
+<UserControl x:Class="AlphaLedger.App.Views.ReportsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:loc="clr-namespace:AlphaLedger.App.Localization"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="1100"
+             FlowDirection="{loc:FlowDirection}"
+             loc:LocalizationExtensions.BindFlowDirection="True">
+    <Grid Background="#F4F6F8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,0,0,1" Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource ReportsTitle}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                    <TextBlock Text="{DynamicResource ReportsSubtitle}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox Content="{DynamicResource CompaniesIncludeArchived}" IsChecked="{Binding IncludeArchived, Mode=TwoWay}"
+                              VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" Margin="0,0,14,0"/>
+                    <Button Content="{DynamicResource ReportsRefresh}" Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding LoadCommand}" MinWidth="100"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- KPI cards -->
+        <Grid Grid.Row="1" Margin="12,12,12,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="14,12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource ReportsTotalFees}" FontSize="12" Foreground="{StaticResource MutedBrush}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="22" FontWeight="Bold" Foreground="{StaticResource NavyBrush}" Margin="0,6,0,0">
+                        <Run Text="{Binding TotalFees, StringFormat={}{0:N2}}"/><Run Text=" "/><Run Text="{DynamicResource CurrencySymbol}"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="14,12" Margin="4,0,4,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource ReportsTotalCollections}" FontSize="12" Foreground="{StaticResource MutedBrush}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="22" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" Margin="0,6,0,0">
+                        <Run Text="{Binding TotalCollections, StringFormat={}{0:N2}}"/><Run Text=" "/><Run Text="{DynamicResource CurrencySymbol}"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="14,12" Margin="4,0,4,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource ReportsOutstanding}" FontSize="12" Foreground="{StaticResource MutedBrush}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="22" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" Margin="0,6,0,0">
+                        <Run Text="{Binding OutstandingFees, StringFormat={}{0:N2}}"/><Run Text=" "/><Run Text="{DynamicResource CurrencySymbol}"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="3" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="14,12" Margin="8,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource ReportsActiveCompanies}" FontSize="12" Foreground="{StaticResource MutedBrush}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding ActiveCompanies}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource NavyDarkBrush}" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Section title -->
+        <TextBlock Grid.Row="2" Text="{DynamicResource ReportsPerCompany}" FontSize="14" FontWeight="SemiBold"
+                   Foreground="{StaticResource NavyBrush}" Margin="14,16,0,4"/>
+
+        <!-- Company breakdown -->
+        <DataGrid Grid.Row="3" ItemsSource="{Binding Items}" Margin="12,0,12,12" Background="White"
+                  AutoGenerateColumns="False" IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{DynamicResource ReportsHeaderCode}" Binding="{Binding Code}" Width="90" FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="{DynamicResource ReportsHeaderCompany}" Binding="{Binding DisplayName}" Width="*" FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="{DynamicResource ReportsHeaderFees}" Binding="{Binding TotalAgreedFees, StringFormat={}{0:N2}}" Width="140"/>
+                <DataGridTextColumn Header="{DynamicResource ReportsHeaderCollections}" Binding="{Binding TotalCollections, StringFormat={}{0:N2}}" Width="140"/>
+                <DataGridTextColumn Header="{DynamicResource ReportsHeaderRemaining}" Binding="{Binding RemainingFees, StringFormat={}{0:N2}}" Width="140"/>
+                <DataGridTextColumn Header="{DynamicResource ReportsHeaderOutstandingOps}" Binding="{Binding OutstandingOperations}" Width="150"/>
+                <DataGridTextColumn Header="{DynamicResource ReportsHeaderNextDeadline}" Binding="{Binding NextTaxDeadline, StringFormat='{}{0:d}'}" Width="140"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Footer -->
+        <Border Grid.Row="4" Background="#EEF2F6" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,1,0,0" Padding="12,6">
+            <DockPanel>
+                <TextBlock Text="{Binding StatusMessage}" DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource NavyBrush}"/>
+                <TextBlock Text="{DynamicResource ReportsFooter}" FontSize="11.5" Foreground="{StaticResource MutedBrush}"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,126 @@
+<UserControl x:Class="AlphaLedger.App.Views.FiscalYearsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:AlphaLedger.App.ViewModels"
+             xmlns:enum="clr-namespace:AlphaLedger.Core.Enums;assembly=AlphaLedger.Core"
+             xmlns:loc="clr-namespace:AlphaLedger.App.Localization"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="900"
+             FlowDirection="{loc:FlowDirection}"
+             loc:LocalizationExtensions.BindFlowDirection="True">
+    <Grid Background="#F4F6F8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,0,0,1" Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource FiscalYearsTitle}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                    <ComboBox ItemsSource="{Binding Companies}" DisplayMemberPath="DisplayName" SelectedValuePath="Id"
+                              SelectedValue="{Binding SelectedCompanyId, Mode=TwoWay}" MinWidth="240" Margin="0,6,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="{DynamicResource FiscalYearsAdd}" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding AddYearCommand}" Margin="0,0,8,0" MinWidth="110"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Input Form -->
+        <Border Grid.Row="1" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,0,0,1" Padding="12" Margin="12,10,12,0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel Margin="0,0,12,0">
+                    <TextBlock Text="{DynamicResource FiscalYearsYearLabel}" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding YearLabel, UpdateSourceTrigger=PropertyChanged}" Width="150" FontSize="12"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,12,0">
+                    <TextBlock Text="{DynamicResource FiscalYearsStartDate}" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+                    <DatePicker SelectedDate="{Binding StartDate, Mode=TwoWay}" Width="110" FontSize="12"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,12,0">
+                    <TextBlock Text="{DynamicResource FiscalYearsEndDate}" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+                    <DatePicker SelectedDate="{Binding EndDate, Mode=TwoWay}" Width="110" FontSize="12"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button Content="{DynamicResource CommonAdd}" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding AddYearCommand}" MinWidth="90" Height="32" Margin="0,0,6,0"/>
+                    <Button Content="{DynamicResource CommonSave}" Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding SaveEditCommand}" MinWidth="90" Height="32"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Years List -->
+        <DataGrid Grid.Row="2" ItemsSource="{Binding Items}" AutoGenerateColumns="False"
+                  CanUserAddRows="False" CanUserDeleteRows="False"
+                  SelectionMode="Single" SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                  Margin="12" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{DynamicResource FiscalYearsYearLabel}" Binding="{Binding YearLabel}" Width="120"/>
+                <DataGridTextColumn Header="{DynamicResource FiscalYearsStartDate}" Binding="{Binding StartDate, StringFormat='{}{0:d}'}" Width="120"/>
+                <DataGridTextColumn Header="{DynamicResource FiscalYearsEndDate}" Binding="{Binding EndDate, StringFormat='{}{0:d}'}" Width="120"/>
+                <DataGridTemplateColumn Header="{DynamicResource FiscalYearsStatus}" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Status}" FontSize="11.5" FontWeight="SemiBold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static enum:FiscalYearStatus.Active}">
+                                                <Setter Property="Foreground" Value="#137333"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static enum:FiscalYearStatus.Closed}">
+                                                <Setter Property="Foreground" Value="#C5221F"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static enum:FiscalYearStatus.Planned}">
+                                                <Setter Property="Foreground" Value="#B45309"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="{DynamicResource FiscalYearsNotes}" Binding="{Binding Notes}" Width="*"/>
+                <DataGridTemplateColumn Header="{DynamicResource CommonEdit}" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="{DynamicResource FiscalYearsEdit}" Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding DataContext.EditYearCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                        Margin="0,0,4,0" MinWidth="70"/>
+                                <Button Content="{DynamicResource FiscalYearsDelete}" Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding DataContext.DeleteYearCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                        MinWidth="70"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Action Buttons -->
+        <Border Grid.Row="3" Background="#EEF2F6" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,1,0,0" Padding="12,6">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="{DynamicResource FiscalYearsClose}" Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding CloseYearCommand}" Margin="0,0,8,0" MinWidth="90"/>
+                <Button Content="{DynamicResource FiscalYearsReopen}" Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding ReopenYearCommand}" Margin="0,0,8,0" MinWidth="90"/>
+                <Button Content="{DynamicResource CommonClose}" Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding CancelEditCommand}" MinWidth="80"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

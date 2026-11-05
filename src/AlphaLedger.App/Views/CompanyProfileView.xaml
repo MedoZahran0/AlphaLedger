@@ -1,0 +1,381 @@
+<UserControl x:Class="AlphaLedger.App.Views.CompanyProfileView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:loc="clr-namespace:AlphaLedger.App.Localization"
+             xmlns:views="clr-namespace:AlphaLedger.App.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1050"
+             FlowDirection="{loc:FlowDirection}"
+             loc:LocalizationExtensions.BindFlowDirection="True">
+    <Grid Background="#F4F6F8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Company Header Summary Card -->
+        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="0,0,0,1" Padding="18,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Background="{StaticResource NavyBrush}" CornerRadius="2" Padding="8,3" Margin="0,0,10,0">
+                            <TextBlock Text="{Binding Company.Code}" Foreground="White" FontWeight="Bold" FontSize="13"/>
+                        </Border>
+                        <TextBlock Text="{Binding Company.DisplayName}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource NavyDarkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Company.LegalNameAr, StringFormat='({0})'}" FontSize="13" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </StackPanel>
+
+                    <WrapPanel Orientation="Horizontal">
+                        <TextBlock FontSize="12" Foreground="{StaticResource TextBrush}"><Run Text="{DynamicResource CompanyProfileTaxRegistration}"/><Run Text="{Binding Company.TaxRegistrationNumber}"/><Run Text="  |  "/></TextBlock>
+                        <TextBlock FontSize="12" Foreground="{StaticResource TextBrush}"><Run Text="{DynamicResource CompanyProfileTaxFile}"/><Run Text="{Binding Company.TaxFileNumber}"/><Run Text="  |  "/></TextBlock>
+                        <TextBlock FontSize="12" Foreground="{StaticResource TextBrush}"><Run Text="{DynamicResource CompanyProfileTaxOfficeLabel}"/><Run Text="{Binding Company.TaxOffice}"/><Run Text="  |  "/></TextBlock>
+                        <TextBlock FontSize="12" Foreground="{StaticResource NavyBrush}" FontWeight="SemiBold"><Run Text="{DynamicResource CompanyProfileEmployeeLabel}"/><Run Text="{Binding Company.AssignedEmployee.FullName}"/><Run Text="  |  "/></TextBlock>
+                        <TextBlock FontSize="12" Foreground="{StaticResource MutedBrush}"><Run Text="{DynamicResource CompanyProfileLegalFormLabel}"/><Run Text="{Binding Company.LegalForm}"/></TextBlock>
+                    </WrapPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="{DynamicResource CompanyProfileEditInfo}" Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding EditCompanyCommand}" MinWidth="110" Height="32" Margin="0,0,8,0"/>
+                    <Button Content="{DynamicResource CompanyProfileOpenFolder}" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding OpenFolderCommand}" MinWidth="140" Height="32" Margin="0,0,8,0"/>
+                    <Button Content="{DynamicResource CompanyProfileOpenOnDisk}" ToolTip="{DynamicResource ArchiveOpenOnDisk}"
+                            Style="{StaticResource SecondaryButtonStyle}" Command="{Binding OpenFolderOnDiskCommand}"
+                            MinWidth="120" Height="32" Margin="0,0,8,0"/>
+                    <Button Content="{DynamicResource CompanyProfileRefresh}" Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding LoadCommand}" MinWidth="80" Height="32"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Simple company work hub; detailed records live under Company details. -->
+        <TabControl Grid.Row="1" Margin="12" Background="White">
+            <TabItem Header="{DynamicResource CompanyProfileWorkflow}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,0,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{DynamicResource CompanyProfileChooseYear}" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                                    <TextBlock Text="{DynamicResource CompanyProfileWorkflowHint}" FontSize="11.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding FiscalYears}" SelectedItem="{Binding SelectedFiscalYear, Mode=TwoWay}"
+                                          DisplayMemberPath="YearLabel" MinWidth="220" VerticalAlignment="Center" Margin="8,0"/>
+                                <Button Grid.Column="2" Content="{DynamicResource FiscalYearsTitle}" Command="{Binding OpenFiscalYearsCommand}"
+                                        Style="{StaticResource SecondaryButtonStyle}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </Grid>
+                        </Border>
+
+                        <UniformGrid Columns="2">
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,8,8">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource CompanyProfileOperations}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                                    <TextBlock Margin="0,8,0,12"><Run Text="{DynamicResource CompanyProfileOperationsCount}"/><Run Text=" "/><Run Text="{Binding Operations.Count, Mode=OneWay}"/></TextBlock>
+                                    <Button Content="{DynamicResource CompanyProfileManageOperations}" Command="{Binding OpenOperationsCommand}" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" CornerRadius="6" Padding="14" Margin="8,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource CompanyProfileTaxReturns}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                                    <TextBlock Margin="0,8,0,12"><Run Text="{DynamicResource CompanyProfileTaxReturnsCount}"/><Run Text=" "/><Run Text="{Binding TaxReturns.Count, Mode=OneWay}"/></TextBlock>
+                                    <Button Content="{DynamicResource CompanyProfileManageTaxReturns}" Command="{Binding OpenTaxReturnsCommand}" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,8,8">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource CompanyProfileFeesCollections}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                                    <TextBlock Margin="0,8,0,2"><Run Text="{DynamicResource DashboardOutstandingLabel}"/><Run Text=" "/><Run Text="{Binding OutstandingBalance, StringFormat={}{0:N2}}"/></TextBlock>
+                                    <TextBlock Margin="0,0,0,10" Foreground="{StaticResource MutedBrush}"><Run Text="{DynamicResource DashboardCollectionsActual}"/><Run Text=" "/><Run Text="{Binding TotalCollections, StringFormat={}{0:N2}}"/></TextBlock>
+                                    <WrapPanel>
+                                        <Button Content="{DynamicResource CompanyProfileManageFinancials}" Command="{Binding OpenFinancialsCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,6,0"/>
+                                        <Button Content="{DynamicResource CompanyProfileAddFee}" Command="{Binding AddFeeCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" CornerRadius="6" Padding="14" Margin="8,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource CompanyProfileDocuments}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                                    <TextBlock Text="{Binding Company.DocumentStoragePath}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Company.DocumentStoragePath}" Margin="0,8,0,12"/>
+                                    <Button Content="{DynamicResource CompanyProfileOpenFolder}" Command="{Binding OpenFolderCommand}" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{DynamicResource CompanyProfileDetails}">
+              <TabControl Margin="8" Background="White">
+            <!-- Tab 1: Basic Info -->
+            <TabItem Header="{DynamicResource CompanyProfileBasicInfo}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <Grid MaxWidth="900" HorizontalAlignment="Stretch">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Right Column -->
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="{DynamicResource CompanyProfileEstablishedActivity}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource NavyBrush}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditEnglishName}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.EnglishName, Mode=OneWay}" IsReadOnly="True" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditBusinessActivity}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.BusinessActivity, Mode=OneWay}" IsReadOnly="True" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditLegalForm}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.LegalForm, Mode=OneWay}" IsReadOnly="True" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditClientSince}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.ClientSince, Mode=OneWay, StringFormat='{}{0:d}'}" IsReadOnly="True" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditFeeAgreement}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.FeeAgreementDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" Height="70" Margin="0,0,0,10"/>
+                        </StackPanel>
+
+                        <!-- Left Column -->
+                        <StackPanel Grid.Column="1" Margin="15,0,0,0">
+                            <TextBlock Text="{DynamicResource CompanyProfileContacts}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource NavyBrush}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditAddress}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.Address, Mode=OneWay}" IsReadOnly="True" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditPhone}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.PhoneNumbers, Mode=OneWay}" IsReadOnly="True" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditEmail}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.Email, Mode=OneWay}" IsReadOnly="True" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditContactPerson}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.ContactPerson, Mode=OneWay}" IsReadOnly="True" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="{DynamicResource CompanyEditInternalNotes}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Company.InternalNotes, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" Height="70" Margin="0,0,0,10"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Tab 2: Fiscal Years -->
+            <TabItem Header="{DynamicResource CompanyProfileFiscalYears}">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <Button Content="{DynamicResource FiscalYearsTitle}" Command="{Binding OpenFiscalYearsCommand}" DockPanel.Dock="Right" Style="{StaticResource PrimaryButtonStyle}"/>
+                        <TextBlock Text="{DynamicResource CompanyProfileFiscalYearsDescription}" FontWeight="SemiBold" FontSize="12.5" Foreground="{StaticResource NavyBrush}" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding FiscalYears}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{DynamicResource FiscalYearsYearLabel}" Binding="{Binding YearLabel}" Width="110" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="{DynamicResource FiscalYearsStartDate}" Binding="{Binding StartDate, StringFormat='{}{0:d}'}" Width="120"/>
+                            <DataGridTextColumn Header="{DynamicResource FiscalYearsEndDate}" Binding="{Binding EndDate, StringFormat='{}{0:d}'}" Width="120"/>
+                            <DataGridTextColumn Header="{DynamicResource FiscalYearsStatus}" Binding="{Binding Status, Converter={StaticResource EnumToDisplayConverter}}" Width="100"/>
+                            <DataGridTextColumn Header="{DynamicResource CompanyProfileFiscalYearFolder}" Binding="{Binding FolderPath}" Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource FiscalYearsNotes}" Binding="{Binding Notes}" Width="180"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 3: Operations & Services -->
+            <TabItem Header="{DynamicResource CompanyProfileOperations}">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <Button Content="{DynamicResource CompanyProfileManageOperations}" Command="{Binding OpenOperationsCommand}" DockPanel.Dock="Right" Style="{StaticResource PrimaryButtonStyle}"/>
+                        <TextBlock Text="{DynamicResource CompanyProfileOperationsDesc}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Operations}" AutoGenerateColumns="False" CanUserAddRows="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{DynamicResource OperationsHeaderCategory}" Binding="{Binding ServiceCategory}" Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource OperationsHeaderDescription}" Binding="{Binding Description}" Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource OperationsTaxPeriod}" Binding="{Binding TaxPeriod}" Width="110"/>
+                            <DataGridTextColumn Header="{DynamicResource OperationsDueDate}" Binding="{Binding DueDate, StringFormat='{}{0:d}'}" Width="130"/>
+                            <DataGridTextColumn Header="{DynamicResource OperationsStatus}" Binding="{Binding Status, Converter={StaticResource EnumToDisplayConverter}}" Width="150"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="{DynamicResource CompanyProfilePortals}">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <WrapPanel Margin="0,0,0,10">
+                                <ComboBox MinWidth="240" ItemsSource="{Binding PortalAccounts}"
+                                          SelectedItem="{Binding SelectedPortalAccount, Mode=TwoWay}"
+                                          DisplayMemberPath="PortalName" Margin="0,0,8,0"/>
+                                <Button Content="{DynamicResource PortalAdd}" Command="{Binding AddPortalAccountCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+                                <Button Content="{DynamicResource PortalSave}" Command="{Binding SavePortalAccountCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,6,0"/>
+                                <Button Content="{DynamicResource PortalDelete}" Command="{Binding DeletePortalAccountCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+                                <Button Content="{DynamicResource PortalOpen}" Command="{Binding OpenPortalCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,6,0"/>
+                            </WrapPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock Text="{DynamicResource PortalNameLabel}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding PortalName, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="4,0">
+                                    <TextBlock Text="{DynamicResource PortalUrlLabel}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding PortalUrl, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+                            </Grid>
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock Text="{DynamicResource PortalUsernameLabel}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <DockPanel LastChildFill="True">
+                                        <Button Content="{DynamicResource PortalCopyUsername}" Command="{Binding CopyPortalUsernameCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Margin="6,0,0,0"/>
+                                        <TextBox Text="{Binding PortalUsername, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </DockPanel>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="{DynamicResource PortalPasswordLabel}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <DockPanel LastChildFill="True">
+                                        <Button Content="{DynamicResource PortalCopyPassword}" Command="{Binding CopyPortalPasswordCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Margin="6,0,0,0"/>
+                                        <TextBox Text="{Binding PortalPassword, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding PortalStatus}" Margin="0,8,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 4: Tax Returns -->
+            <TabItem Header="{DynamicResource CompanyProfileTaxReturns}">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <Button Content="{DynamicResource CompanyProfileManageTaxReturns}" Command="{Binding OpenTaxReturnsCommand}" DockPanel.Dock="Right" Style="{StaticResource PrimaryButtonStyle}"/>
+                        <TextBlock Text="{DynamicResource CompanyProfileTaxReturnsDesc}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding TaxReturns}" AutoGenerateColumns="False" CanUserAddRows="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{DynamicResource TaxReturnsTaxType}" Binding="{Binding TaxType}" Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource TaxReturnsTaxPeriod}" Binding="{Binding TaxPeriod}" Width="140"/>
+                            <DataGridTextColumn Header="{DynamicResource TaxReturnsHeaderDueDate}" Binding="{Binding FilingDueDate, StringFormat='{}{0:d}'}" Width="140"/>
+                            <DataGridTextColumn Header="{DynamicResource TaxReturnsHeaderFilingStatus}" Binding="{Binding FilingStatus, Converter={StaticResource EnumToDisplayConverter}}" Width="160"/>
+                            <DataGridTextColumn Header="{DynamicResource TaxReturnsSubmissionDate}" Binding="{Binding SubmissionDate, StringFormat='{}{0:d}'}" Width="140"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 5: Fees & Collections -->
+            <TabItem Header="{DynamicResource CompanyProfileFeesCollections}">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" FontWeight="SemiBold"><Run Text="{DynamicResource DashboardTotalFees}"/><Run Text=" "/><Run Text="{Binding TotalAgreedFees, StringFormat={}{0:N2}}"/></TextBlock>
+                        <TextBlock Grid.Column="1" FontWeight="SemiBold"><Run Text="{DynamicResource DashboardCollectionsActual}"/><Run Text=" "/><Run Text="{Binding TotalCollections, StringFormat={}{0:N2}}"/></TextBlock>
+                        <TextBlock Grid.Column="2" FontWeight="Bold" Foreground="{StaticResource DangerBrush}"><Run Text="{DynamicResource DashboardOutstandingLabel}"/><Run Text="{Binding OutstandingBalance, StringFormat={}{0:N2}}"/></TextBlock>
+                        <Button Grid.Column="3" Content="{DynamicResource CompanyProfileAddFee}" Command="{Binding AddFeeCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="8,0,0,0"/>
+                        <Button Grid.Column="4" Content="{DynamicResource CompanyProfileManageFinancials}" Command="{Binding OpenFinancialsCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="8,0,0,0"/>
+                    </Grid>
+                    <TextBlock Grid.Row="1" Text="{DynamicResource CompanyProfileFeesSection}" FontWeight="Bold" Margin="0,0,0,6"/>
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Fees}" AutoGenerateColumns="False" CanUserAddRows="False" Margin="0,0,0,8">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{DynamicResource FeeHeaderDescription}" Binding="{Binding Description}" Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource FeeHeaderAmount}" Binding="{Binding Amount, StringFormat='{}{0:N2}'}" Width="130"/>
+                            <DataGridTextColumn Header="{DynamicResource FeeHeaderCurrency}" Binding="{Binding Currency}" Width="90"/>
+                            <DataGridTextColumn Header="{DynamicResource FeeHeaderDueDate}" Binding="{Binding DueDate, StringFormat='{}{0:d}'}" Width="130"/>
+                            <DataGridTextColumn Header="{DynamicResource FeeHeaderStatus}" Binding="{Binding Status, Converter={StaticResource EnumToDisplayConverter}}" Width="150"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock Grid.Row="3" Text="{DynamicResource CollectionHistoryTitle}" FontWeight="Bold" Margin="0,0,0,6"/>
+                    <DataGrid Grid.Row="4" ItemsSource="{Binding Collections}" AutoGenerateColumns="False" CanUserAddRows="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{DynamicResource CollectionHeaderDate}" Binding="{Binding CollectionDate, StringFormat='{}{0:d}'}" Width="130"/>
+                            <DataGridTextColumn Header="{DynamicResource CollectionHeaderAmount}" Binding="{Binding AmountReceived, StringFormat='{}{0:N2}'}" Width="130"/>
+                            <DataGridTextColumn Header="{DynamicResource CollectionHeaderMethod}" Binding="{Binding PaymentMethod}" Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource CollectionHeaderReceipt}" Binding="{Binding ReceiptNumber}" Width="150"/>
+                            <DataGridTemplateColumn Header="{DynamicResource CollectionHeaderStatus}" Width="130">
+                                <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                                    <TextBlock>
+                                        <TextBlock.Style><Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="{DynamicResource CollectionStatusActive}"/>
+                                            <Style.Triggers><DataTrigger Binding="{Binding IsReversed}" Value="True"><Setter Property="Text" Value="{DynamicResource CollectionStatusReversed}"/></DataTrigger></Style.Triggers>
+                                        </Style></TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 6: Documents & Folder -->
+            <TabItem Header="{DynamicResource CompanyProfileDocuments}">
+                <ScrollViewer Padding="20">
+                    <StackPanel MaxWidth="850">
+                        <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="14" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource CompanyProfileDocumentPath}" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource NavyBrush}" Margin="0,0,0,6"/>
+                                <TextBox Text="{Binding Company.DocumentStoragePath, Mode=OneWay}" IsReadOnly="True" FontSize="12.5" Margin="0,0,0,10"/>
+                                <Button Content="{DynamicResource CompanyProfileDocumentsOpenExplorer}" Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding OpenFolderCommand}" HorizontalAlignment="Left" MinWidth="220"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="{DynamicResource CompanyProfileFoldersDescription}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource NavyDarkBrush}" Margin="0,0,0,8"/>
+                        <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="14">
+                            <TextBlock Text="{DynamicResource CompanyProfileFolderStructure}"
+                                       FontSize="12" Foreground="{StaticResource TextBrush}" LineHeight="20"/>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+              </TabControl>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AlphaLedger.App/AlphaLedger.App.csproj" />
+    <Project Path="src/AlphaLedger.Core/AlphaLedger.Core.csproj" />
+    <Project Path="src/AlphaLedger.Infrastructure/AlphaLedger.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AlphaLedger.Tests/AlphaLedger.Tests.csproj" />
+  </Folder>
+</Solution>

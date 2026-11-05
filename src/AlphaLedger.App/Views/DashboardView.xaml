@@ -1,0 +1,236 @@
+<UserControl x:Class="AlphaLedger.App.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:loc="clr-namespace:AlphaLedger.App.Localization"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="1050"
+             FlowDirection="{loc:FlowDirection}"
+             loc:LocalizationExtensions.BindFlowDirection="True">
+    <UserControl.Resources>
+        <Style x:Key="DashboardCard" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="18,16"/>
+        </Style>
+        <Style x:Key="DashboardSection" TargetType="Border" BasedOn="{StaticResource DashboardCard}">
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#F3F6FA">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="22">
+                <Border Background="{StaticResource NavyDarkBrush}" CornerRadius="12" Padding="22,18" Margin="0,0,0,18">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource DashboardTitle}" FontSize="21" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="#C5D5E8"
+                                       Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="{DynamicResource DashboardRefresh}" Style="{StaticResource SecondaryButtonStyle}"
+                                    Command="{Binding LoadCommand}" Margin="0,0,8,0" MinWidth="112"/>
+                            <Button Content="{DynamicResource DashboardGoToCompanies}" Style="{StaticResource PrimaryButtonStyle}"
+                                    Command="{Binding GoToCompaniesCommand}" MinWidth="132"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Padding="28" Margin="0,0,0,18">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource DashboardCard}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnyCompanies}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520">
+                        <TextBlock Text="🏢" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                        <TextBlock Text="{DynamicResource DashboardEmptyTitle}" FontSize="20" FontWeight="Bold"
+                                   Foreground="{StaticResource NavyBrush}" TextAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource DashboardEmptyDescription}" FontSize="13"
+                                   Foreground="{StaticResource MutedBrush}" TextAlignment="Center"
+                                   TextWrapping="Wrap" Margin="0,8,0,18"/>
+                        <Button Content="{DynamicResource DashboardEmptyAction}" Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding GoToCompaniesCommand}" HorizontalAlignment="Center" MinWidth="160"/>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnyCompanies}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
+                    <UniformGrid Columns="4" Margin="0,0,0,18">
+                        <Border Style="{StaticResource DashboardCard}" Margin="0,0,7,0">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource DashboardActiveCompanies}" Foreground="{StaticResource MutedBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding ActiveCompanies}" Foreground="{StaticResource NavyBrush}" FontSize="28" FontWeight="Bold" Margin="0,8,0,3"/>
+                                <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="11">
+                                    <Run Text="{DynamicResource DashboardArchivedLabel}"/>
+                                    <Run Text="{Binding ArchivedCompanies}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource DashboardCard}" Margin="7,0">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource DashboardTotalFees}" Foreground="{StaticResource MutedBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBlock Foreground="{StaticResource NavyBrush}" FontSize="23" FontWeight="Bold" Margin="0,8,0,3">
+                                    <Run Text="{Binding TotalFees, StringFormat={}{0:N0}}"/>
+                                    <Run Text=" "/><Run Text="{DynamicResource CurrencySymbol}"/>
+                                </TextBlock>
+                                <TextBlock Text="{DynamicResource DashboardFeesScope}" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource DashboardCard}" Margin="7,0">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource DashboardCollectionsActual}" Foreground="{StaticResource MutedBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBlock Foreground="{StaticResource SuccessBrush}" FontSize="23" FontWeight="Bold" Margin="0,8,0,3">
+                                    <Run Text="{Binding TotalCollections, StringFormat={}{0:N0}}"/>
+                                    <Run Text=" "/><Run Text="{DynamicResource CurrencySymbol}"/>
+                                </TextBlock>
+                                <TextBlock Foreground="{StaticResource DangerBrush}" FontSize="11" FontWeight="SemiBold">
+                                    <Run Text="{DynamicResource DashboardOutstandingLabel}"/>
+                                    <Run Text="{Binding OutstandingFees, StringFormat={}{0:N0}}"/>
+                                    <Run Text=" "/><Run Text="{DynamicResource CurrencySymbol}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource DashboardCard}" Margin="7,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource DashboardUpcomingDeadlines}" Foreground="{StaticResource MutedBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                <TextBlock Foreground="{StaticResource DangerBrush}" FontSize="19" FontWeight="Bold" Margin="0,8,0,3">
+                                    <Run Text="{Binding OverdueOperations}"/>
+                                    <Run Text=" "/><Run Text="{DynamicResource DashboardOverdueSummary}"/>
+                                </TextBlock>
+                                <TextBlock Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="SemiBold">
+                                    <Run Text="{Binding UpcomingDeadlines}"/>
+                                    <Run Text=" "/><Run Text="{DynamicResource DashboardUpcomingSummary}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource DashboardSection}" Margin="0,0,8,0">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,12">
+                                    <TextBlock Text="{DynamicResource DashboardRecentCompaniesHint}" DockPanel.Dock="Left"
+                                               FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                                    <TextBlock Text="{DynamicResource DashboardRecentCompanies}" DockPanel.Dock="Right"
+                                               FontSize="14" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                                </DockPanel>
+                                <DataGrid ItemsSource="{Binding RecentCompanies}" AutoGenerateColumns="False"
+                                          IsReadOnly="True" CanUserAddRows="False" MaxHeight="270">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="{DynamicResource DashboardColumnCode}" Binding="{Binding Code}" Width="82"/>
+                                        <DataGridTextColumn Header="{DynamicResource DashboardColumnCompany}" Binding="{Binding DisplayName}" Width="*"/>
+                                        <DataGridTextColumn Header="{DynamicResource DashboardColumnOwner}" Binding="{Binding AssignedEmployeeName}" Width="100"/>
+                                        <DataGridTemplateColumn Header="{DynamicResource DashboardOpenCompany}" Width="82">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="{DynamicResource DashboardOpenCompany}" Command="{Binding DataContext.OpenCompanyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}" Style="{StaticResource SecondaryButtonStyle}" Padding="6,2"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1" Style="{StaticResource DashboardSection}" Margin="8,0,0,0">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,12">
+                                    <TextBlock Text="{DynamicResource DashboardOutstandingSubtitle}" DockPanel.Dock="Left"
+                                               FontSize="11" Foreground="{StaticResource DangerBrush}"/>
+                                    <TextBlock Text="{DynamicResource DashboardOutstandingTitle}" DockPanel.Dock="Right"
+                                               FontSize="14" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
+                                </DockPanel>
+                                <DataGrid ItemsSource="{Binding OutstandingCompanies}" AutoGenerateColumns="False"
+                                          IsReadOnly="True" CanUserAddRows="False" MaxHeight="270">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="{DynamicResource DashboardColumnCompany}" Binding="{Binding DisplayName}" Width="*"/>
+                                        <DataGridTextColumn Header="{DynamicResource DashboardColumnFees}" Binding="{Binding TotalAgreedFees, StringFormat='{}{0:N0}'}" Width="92"/>
+                                        <DataGridTextColumn Header="{DynamicResource DashboardColumnCollected}" Binding="{Binding TotalCollections, StringFormat='{}{0:N0}'}" Width="92"/>
+                                        <DataGridTextColumn Header="{DynamicResource DashboardColumnRemaining}" Binding="{Binding RemainingFees, StringFormat='{}{0:N0}'}" Width="92">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <TextBlock Text="{DynamicResource DashboardNoOutstanding}" Foreground="{StaticResource MutedBrush}"
+                                           HorizontalAlignment="Center" Margin="0,16,0,4">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding OutstandingCompanies.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Style="{StaticResource DashboardSection}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource DashboardDeadlinesTitle}" FontSize="14" FontWeight="Bold"
+                                       Foreground="{StaticResource NavyBrush}" Margin="0,0,0,12"/>
+                            <DataGrid ItemsSource="{Binding UpcomingDeadlinesList}" AutoGenerateColumns="False"
+                                      IsReadOnly="True" CanUserAddRows="False" MaxHeight="250">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{DynamicResource DashboardColumnCompany}" Binding="{Binding DisplayName}" Width="*"/>
+                                    <DataGridTextColumn Header="{DynamicResource DashboardUpcomingDeadlines}" Binding="{Binding NextTaxDeadline, StringFormat='{}{0:d}'}" Width="180"/>
+                                    <DataGridTextColumn Header="{DynamicResource DashboardColumnOwner}" Binding="{Binding AssignedEmployeeName}" Width="200"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBlock Text="{DynamicResource DashboardNoDeadlines}" Foreground="{StaticResource MutedBrush}"
+                                       HorizontalAlignment="Center" Margin="0,16,0,4">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding UpcomingDeadlinesList.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

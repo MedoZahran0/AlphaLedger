@@ -1,0 +1,203 @@
+<UserControl x:Class="AlphaLedger.App.Views.FeesView"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:loc="clr-namespace:AlphaLedger.App.Localization"
+			 FlowDirection="{loc:FlowDirection}"
+			 loc:LocalizationExtensions.BindFlowDirection="True">
+	<Grid Background="#F4F6F8" Margin="12">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<TextBlock Text="{DynamicResource FeesTitle}" FontSize="17" FontWeight="Bold" Foreground="{StaticResource NavyBrush}" Margin="4,0,0,10"/>
+
+		<Grid Grid.Row="1" Margin="0,0,0,10">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+			<TextBlock Grid.Column="0" FontWeight="SemiBold"><Run Text="{DynamicResource DashboardTotalFees}"/><Run Text=" "/><Run Text="{Binding TotalAgreedFees, StringFormat={}{0:N2}}"/></TextBlock>
+			<TextBlock Grid.Column="1" FontWeight="SemiBold"><Run Text="{DynamicResource DashboardCollectionsActual}"/><Run Text=" "/><Run Text="{Binding TotalCollected, StringFormat={}{0:N2}}"/></TextBlock>
+			<TextBlock Grid.Column="2" FontWeight="Bold" Foreground="{StaticResource DangerBrush}"><Run Text="{DynamicResource DashboardOutstandingLabel}"/><Run Text="{Binding OutstandingBalance, StringFormat={}{0:N2}}"/></TextBlock>
+		</Grid>
+
+		<WrapPanel Grid.Row="2" Margin="0,0,0,10" VerticalAlignment="Center">
+			<ComboBox MinWidth="180" ItemsSource="{Binding Companies}" DisplayMemberPath="DisplayName"
+					  SelectedValuePath="Id" SelectedValue="{Binding SelectedCompanyId, Mode=TwoWay}" Margin="0,0,8,0"/>
+			<ComboBox MinWidth="125" ItemsSource="{Binding FiscalYears}" DisplayMemberPath="YearLabel"
+					  SelectedValuePath="Id" SelectedValue="{Binding SelectedFiscalYearId, Mode=TwoWay}"
+					  ToolTip="{DynamicResource FeesFiscalYearFilter}" Margin="0,0,8,0"/>
+			<Button Content="{DynamicResource CommonAdd}" Command="{Binding NewFeeCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,8,0"/>
+			<Button Content="{DynamicResource CommonRefresh}" Command="{Binding LoadCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0"/>
+			<Expander Header="{DynamicResource CommonMoreFilters}" VerticalAlignment="Center" Margin="0,0,8,0">
+				<WrapPanel Margin="4,8,4,0">
+			<ComboBox MinWidth="150" ItemsSource="{Binding FilterStatuses}" DisplayMemberPath="Label"
+					  SelectedItem="{Binding SelectedStatusOption, Mode=TwoWay}" Margin="0,0,8,0"/>
+			<TextBox Width="190" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+					 ToolTip="{DynamicResource CommonSearch}" Margin="0,0,8,0"/>
+			<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+				<TextBlock Text="{DynamicResource FeesFromDate}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+				<TextBox Width="92" Text="{Binding FilterFromDate, UpdateSourceTrigger=PropertyChanged}"/>
+			</StackPanel>
+			<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+				<TextBlock Text="{DynamicResource FeesToDate}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+				<TextBox Width="92" Text="{Binding FilterToDate, UpdateSourceTrigger=PropertyChanged}"/>
+			</StackPanel>
+			<CheckBox Content="{DynamicResource FeesOnlyOutstanding}" IsChecked="{Binding ShowOnlyUncollected}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+				</WrapPanel>
+			</Expander>
+		</WrapPanel>
+
+		<TabControl Grid.Row="3" Margin="0,0,0,8">
+		<TabItem Header="{DynamicResource FeesTab}">
+		<Grid Margin="6">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="1.25*"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+			<DataGrid Grid.Column="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedFee, Mode=TwoWay}"
+					  AutoGenerateColumns="False" CanUserAddRows="False" Margin="0,0,8,0">
+				<DataGrid.Columns>
+					<DataGridTextColumn Header="{DynamicResource FeeHeaderDescription}" Binding="{Binding Description}" Width="*"/>
+					<DataGridTextColumn Header="{DynamicResource FeeHeaderAmount}" Binding="{Binding Amount, StringFormat='{}{0:N2}'}" Width="105"/>
+					<DataGridTextColumn Header="{DynamicResource FeesFiscalYearFilter}" Binding="{Binding FiscalYearLabel}" Width="85"/>
+					<DataGridTextColumn Header="{DynamicResource FeeHeaderStatus}" Binding="{Binding Status, Converter={StaticResource EnumToDisplayConverter}}" Width="120"/>
+					<DataGridTextColumn Header="{DynamicResource FeesOutstandingColumn}" Binding="{Binding Outstanding, StringFormat='{}{0:N2}'}" Width="105"/>
+				</DataGrid.Columns>
+			</DataGrid>
+			<ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+				<Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="12">
+					<StackPanel>
+						<TextBlock Text="{DynamicResource FeesEditorTitle}" FontWeight="Bold" Foreground="{StaticResource NavyBrush}" Margin="0,0,0,8"/>
+						<TextBlock Text="{DynamicResource FeeHeaderDescription}"/>
+						<TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+						<Grid>
+							<Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+							<StackPanel Grid.Column="0" Margin="0,0,4,0">
+								<TextBlock Text="{DynamicResource FeeHeaderAmount}"/>
+								<TextBox Text="{Binding Amount, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+							</StackPanel>
+						<StackPanel Grid.Column="1" Margin="4,0,0,0">
+							<TextBlock Text="{DynamicResource FeeHeaderCurrency}"/>
+							<TextBox Text="{Binding Currency, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+						</StackPanel>
+						</Grid>
+						<Grid>
+							<Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+							<StackPanel Grid.Column="0" Margin="0,0,4,0">
+								<TextBlock Text="{DynamicResource FiscalYearsStartDate}"/>
+								<TextBox Text="{Binding FeeDate, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+							</StackPanel>
+							<StackPanel Grid.Column="1" Margin="4,0,0,0">
+								<TextBlock Text="{DynamicResource FeeHeaderDueDate}"/>
+								<TextBox Text="{Binding DueDate, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+							</StackPanel>
+						</Grid>
+						<TextBlock Text="{DynamicResource FeeHeaderStatus}"/>
+						<ComboBox ItemsSource="{Binding FeeStatuses}" SelectedItem="{Binding FeeStatus, Mode=TwoWay}" Margin="0,2,0,6">
+							<ComboBox.ItemTemplate>
+								<DataTemplate><TextBlock Text="{Binding Converter={StaticResource EnumToDisplayConverter}}"/></DataTemplate>
+							</ComboBox.ItemTemplate>
+						</ComboBox>
+						<Expander Header="{DynamicResource CommonMoreDetails}" Margin="0,2,0,8">
+							<StackPanel Margin="4,6,4,0">
+								<TextBlock Text="{DynamicResource FeesPaymentTerms}"/>
+								<TextBox Text="{Binding PaymentTerms, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+								<TextBlock Text="{DynamicResource FiscalYearsNotes}"/>
+								<TextBox Text="{Binding FeeNotes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="54" Margin="0,2,0,8"/>
+							</StackPanel>
+						</Expander>
+						<WrapPanel>
+							<Button Content="{DynamicResource CommonSave}" Command="{Binding SaveFeeCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,6,0"/>
+							<Button Content="{DynamicResource CommonEdit}" Command="{Binding EditFeeCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+							<Button Content="{DynamicResource FeesCancelFee}" Command="{Binding CancelSelectedFeeCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+						</WrapPanel>
+						<Expander Header="{DynamicResource CommonMoreActions}" Margin="0,8,0,0">
+							<WrapPanel Margin="4,6,4,0">
+								<Button Content="{DynamicResource ArchiveOpenOnDisk}" Command="{Binding OpenArchiveCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+								<Button Content="{DynamicResource FeesAttachToArchive}" Command="{Binding AttachDocumentCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+							</WrapPanel>
+						</Expander>
+					</StackPanel>
+				</Border>
+			</ScrollViewer>
+		</Grid>
+		</TabItem>
+
+		<TabItem Header="{DynamicResource CollectionsTab}">
+		<Grid Margin="6">
+			<Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="1.3*"/></Grid.ColumnDefinitions>
+			<Border Grid.Column="0" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="10" Margin="0,0,8,0">
+				<StackPanel>
+					<TextBlock Text="{DynamicResource CollectionEditorTitle}" FontWeight="Bold" Foreground="{StaticResource NavyBrush}" Margin="0,0,0,6"/>
+					<ComboBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedFee, Mode=TwoWay}" DisplayMemberPath="Description"
+						  ToolTip="{DynamicResource FeesChooseFeeForCollection}" Margin="0,0,0,6"/>
+					<TextBlock Text="{Binding SelectedFee.Description}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
+					<TextBlock Margin="0,0,0,8"><Run Text="{DynamicResource DashboardOutstandingLabel}"/><Run Text=" "/><Run Text="{Binding SelectedFee.Outstanding, StringFormat={}{0:N2}}"/></TextBlock>
+					<Grid>
+						<Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+						<StackPanel Grid.Column="0" Margin="0,0,4,0">
+							<TextBlock Text="{DynamicResource CollectionHeaderAmount}"/>
+							<TextBox Text="{Binding CollectionAmount, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+						</StackPanel>
+						<StackPanel Grid.Column="1" Margin="4,0,0,0">
+							<TextBlock Text="{DynamicResource CollectionHeaderDate}"/>
+							<TextBox Text="{Binding CollectionDate, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+						</StackPanel>
+					</Grid>
+					<TextBlock Text="{DynamicResource CollectionHeaderMethod}"/>
+					<TextBox Text="{Binding PaymentMethod, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+					<TextBlock Text="{DynamicResource CollectionHeaderReceipt}"/>
+					<TextBox Text="{Binding ReceiptNumber, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+					<Expander Header="{DynamicResource CommonMoreDetails}" Margin="0,2,0,8">
+						<StackPanel Margin="4,6,4,0">
+							<TextBlock Text="{DynamicResource FiscalYearsNotes}"/>
+							<TextBox Text="{Binding CollectionNotes, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+							<TextBlock Text="{DynamicResource CollectionsReversalReason}"/>
+							<TextBox Text="{Binding ReversalReason, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6"/>
+						</StackPanel>
+					</Expander>
+					<WrapPanel>
+						<Button Content="{DynamicResource CollectionRecord}" Command="{Binding SaveCollectionCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,6,0"/>
+						<Expander Header="{DynamicResource CommonMoreActions}" Margin="8,0,0,0" VerticalAlignment="Center">
+							<WrapPanel Margin="4,6,4,0">
+								<Button Content="{DynamicResource CollectionsEdit}" Command="{Binding EditSelectedCollectionCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+								<Button Content="{DynamicResource CollectionsReverse}" Command="{Binding ReverseSelectedCollectionCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+								<Button Content="{DynamicResource CollectionsPrintReceipt}" Command="{Binding PrintSelectedReceiptCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+								<Button Content="{DynamicResource ArchiveOpenOnDisk}" Command="{Binding OpenArchiveCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+								<Button Content="{DynamicResource FeesAttachCollectionToArchive}" Command="{Binding AttachCollectionDocumentCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+							</WrapPanel>
+						</Expander>
+					</WrapPanel>
+				</StackPanel>
+			</Border>
+			<DataGrid Grid.Column="1" ItemsSource="{Binding Collections}" SelectedItem="{Binding SelectedCollection, Mode=TwoWay}"
+					  AutoGenerateColumns="False" CanUserAddRows="False" Background="White">
+				<DataGrid.Columns>
+					<DataGridTextColumn Header="{DynamicResource CollectionHeaderDate}" Binding="{Binding CollectionDate, StringFormat='{}{0:d}'}" Width="95"/>
+					<DataGridTextColumn Header="{DynamicResource CollectionHeaderAmount}" Binding="{Binding AmountReceived, StringFormat='{}{0:N2}'}" Width="105"/>
+					<DataGridTextColumn Header="{DynamicResource CollectionHeaderReceipt}" Binding="{Binding ReceiptNumber}" Width="*"/>
+					<DataGridTemplateColumn Header="{DynamicResource CollectionHeaderStatus}" Width="100">
+						<DataGridTemplateColumn.CellTemplate><DataTemplate>
+							<TextBlock>
+								<TextBlock.Style><Style TargetType="TextBlock">
+									<Setter Property="Text" Value="{DynamicResource CollectionStatusActive}"/>
+									<Style.Triggers><DataTrigger Binding="{Binding IsReversed}" Value="True"><Setter Property="Text" Value="{DynamicResource CollectionStatusReversed}"/></DataTrigger></Style.Triggers>
+								</Style></TextBlock.Style>
+							</TextBlock>
+						</DataTemplate></DataGridTemplateColumn.CellTemplate>
+					</DataGridTemplateColumn>
+				</DataGrid.Columns>
+			</DataGrid>
+		</Grid>
+		</TabItem>
+		</TabControl>
+
+		<TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="{StaticResource NavyBrush}" Margin="4,8,0,0"/>
+	</Grid>
+</UserControl>
