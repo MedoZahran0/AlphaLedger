@@ -7,7 +7,7 @@
     <system:String x:Key="AppShortName">Alpha Ledger</system:String>
     <system:String x:Key="AppFooterBrand">Alpha Ledger ERP</system:String>
     <system:String x:Key="AppSubtitle">محاسبون قانونيون ومستشارون • وضوح مالي ونمو لأعمالك</system:String>
-    <system:String x:Key="Version">الإصدار 1.0.0</system:String>
+    <system:String x:Key="Version">الإصدار {0}</system:String>
     <system:String x:Key="DatabaseStatus">قاعدة بيانات SQLITE محلية (متصلة)</system:String>
     <system:String x:Key="CurrentUser">مستخدم</system:String>
     <system:String x:Key="CurrentUserRole">محاسب</system:String>

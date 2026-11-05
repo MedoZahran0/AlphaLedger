@@ -158,7 +158,9 @@ public partial class MainWindowViewModel : ObservableObject
         DatabaseStatus = GetString("DatabaseStatus");
         CurrentUser = string.IsNullOrWhiteSpace(_userName) ? GetString("CurrentUser") : _userName;
         CurrentUserRole = string.IsNullOrWhiteSpace(_userRole) ? GetString("CurrentUserRole") : _userRole;
-        Version = GetString("Version");
+        var applicationVersion = typeof(MainWindowViewModel).Assembly.GetName().Version;
+        var versionText = applicationVersion?.ToString(3) ?? "1.0.0";
+        Version = string.Format(CultureInfo.CurrentCulture, GetString("Version"), versionText);
         CurrentDate = DateTime.Now.ToString("D", LocalizationService.Instance.CurrentCulture);
 
         var titleKey = _activeScreenKey switch
