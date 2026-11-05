@@ -1,0 +1,21 @@
+<Window x:Class="AlphaLedger.App.Views.UpdateProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:AlphaLedger.App.Localization"
+        Title="{DynamicResource UpdateProgressTitle}"
+        Width="460" Height="190" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        FlowDirection="{loc:FlowDirection}"
+        loc:LocalizationExtensions.BindFlowDirection="True">
+    <Grid Background="#F4F6F8" Margin="20">
+        <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="{DynamicResource UpdateProgressMessage}" FontSize="15"
+                       FontWeight="SemiBold" Foreground="{StaticResource NavyBrush}"/>
+            <TextBlock x:Name="ProgressDetails" Text="{DynamicResource UpdateProgressPreparing}"
+                       Margin="0,8,0,14" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
+            <ProgressBar x:Name="DownloadProgressBar" Height="12" Minimum="0" Maximum="100"
+                         IsIndeterminate="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

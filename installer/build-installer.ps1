@@ -37,6 +37,7 @@ try {
         --runtime $RuntimeIdentifier `
         --self-contained true `
         -p:PublishSingleFile=true `
+        -p:EnableCompressionInSingleFile=true `
         -p:IncludeNativeLibrariesForSelfExtract=true `
         -p:IncludeAllContentForSelfExtract=true `
         -p:DebugType=None `
@@ -53,6 +54,7 @@ try {
     }
 
     New-Item -ItemType Directory -Force -Path $output | Out-Null
+    Copy-Item -LiteralPath $app -Destination (Join-Path $output 'AlphaLedger-Update.exe') -Force
     & $compiler "/DAppSource=$app" "/DAppVersion=$appVersion" "/O$output" '/FAlphaLedger-Setup' (Join-Path $PSScriptRoot 'AlphaLedger.iss')
     if ($LASTEXITCODE -ne 0) {
         throw 'Inno Setup could not create AlphaLedger-Setup.exe.'

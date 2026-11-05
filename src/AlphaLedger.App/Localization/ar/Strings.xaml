@@ -401,8 +401,14 @@
     <system:String x:Key="SettingsPickDocumentFolder">اختر مجلد تخزين مستندات الشركات</system:String>
     <system:String x:Key="SettingsSystemInfo">⚙ معلومات قاعدة البيانات ومسارات النظام</system:String>
     <system:String x:Key="UpdateAvailableTitle">يتوفر تحديث</system:String>
-    <system:String x:Key="UpdateAvailableMessage">يتوفر إصدار أحدث ({0}). هل تريد تنزيل التحديث وتشغيل برنامج التثبيت؟</system:String>
-    <system:String x:Key="UpdateCheckFailedMessage">تعذر تنزيل التحديث أو التحقق من سلامته. لم يتم تثبيته؛ راجع اتصال الإنترنت أو سجل أخطاء التطبيق.</system:String>
+    <system:String x:Key="UpdateAvailableMessage">يتوفر إصدار أحدث ({0}). هل تريد تنزيل التحديث؟</system:String>
+    <system:String x:Key="UpdateCheckFailedMessage">تعذر تنزيل التحديث أو التحقق من سلامته. لم يتم تطبيقه؛ راجع اتصال الإنترنت أو سجل أخطاء التطبيق.</system:String>
+    <system:String x:Key="UpdateApplyFailedMessage">تعذر تطبيق التحديث. لم يتم استبدال النسخة الحالية؛ راجع سجل أخطاء التطبيق.</system:String>
+    <system:String x:Key="UpdateReadyRestartMessage">تم تنزيل التحديث ({0}) والتحقق منه. هل تريد إعادة تشغيل البرنامج الآن لتطبيقه؟</system:String>
+    <system:String x:Key="UpdateProgressTitle">تحديث Alpha Ledger</system:String>
+    <system:String x:Key="UpdateProgressMessage">جارٍ تنزيل التحديث...</system:String>
+    <system:String x:Key="UpdateProgressPreparing">جارٍ الاتصال بخادم التحديث...</system:String>
+    <system:String x:Key="UpdateProgressDownloaded">تم تنزيل {0} من {1}</system:String>
     <system:String x:Key="SettingsDatabasePath">مسار قاعدة بيانات SQLite:</system:String>
     <system:String x:Key="SettingsAppDataPath">مجلد بيانات التطبيق AppData:</system:String>
     <system:String x:Key="SettingsSystemStatus">حالة النظام:</system:String>

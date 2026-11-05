@@ -1,6 +1,7 @@
 using System.IO;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Windows;
 using AlphaLedger.App.Localization;
 using AlphaLedger.App.Services;
@@ -26,6 +27,32 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        if (e.Args.Length == 5 && e.Args[0] == "--apply-update" &&
+            int.TryParse(e.Args[1], out var processId) &&
+            !string.IsNullOrWhiteSpace(e.Args[2]) &&
+            !string.IsNullOrWhiteSpace(e.Args[3]) &&
+            !string.IsNullOrWhiteSpace(e.Args[4]))
+        {
+            try
+            {
+                await ApplyUpdateAsync(processId, e.Args[2], e.Args[3], e.Args[4]);
+            }
+            catch (Exception ex)
+            {
+                LogUpdateError(ex);
+                MessageBox.Show(
+                    $"The update could not be applied. Your existing installation was not replaced.\n\n{ex.Message}",
+                    "Update failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                Shutdown(1);
+                return;
+            }
+
+            Shutdown();
+            return;
+        }
 
         // Prevent unexpected browser/WebView2 errors from terminating the application
         DispatcherUnhandledException += (s, args) =>
@@ -217,20 +244,108 @@ public partial class App : Application
         if (answer != MessageBoxResult.Yes)
             return;
 
+        string updatePath;
+        var progressWindow = new UpdateProgressWindow
+        {
+            Owner = mainWindow
+        };
+        progressWindow.Show();
         try
         {
-            var installerPath = await updater.DownloadInstallerAsync(update);
-            Process.Start(new ProcessStartInfo(installerPath) { UseShellExecute = true });
+            var progress = new Progress<GitHubUpdateService.DownloadProgress>(progressWindow.ReportProgress);
+            updatePath = await updater.DownloadUpdateAsync(update, progress);
+        }
+        catch (Exception ex)
+        {
+            progressWindow.Close();
+            LogUpdateError(ex);
+            MessageBox.Show(mainWindow,
+                localization.GetString("UpdateCheckFailedMessage"),
+                localization.GetString("UpdateAvailableTitle"),
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        progressWindow.Close();
+        var restartAnswer = MessageBox.Show(mainWindow,
+            string.Format(localization.CurrentCulture,
+                localization.GetString("UpdateReadyRestartMessage"), update.TagName),
+            localization.GetString("UpdateAvailableTitle"),
+            MessageBoxButton.YesNo, MessageBoxImage.Information);
+        if (restartAnswer != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            var currentExecutable = Environment.ProcessPath
+                ?? throw new InvalidOperationException("The current application executable path could not be determined.");
+            var restartInfo = new ProcessStartInfo(updatePath)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            restartInfo.ArgumentList.Add("--apply-update");
+            restartInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+            restartInfo.ArgumentList.Add(currentExecutable);
+            restartInfo.ArgumentList.Add(updatePath);
+            restartInfo.ArgumentList.Add(update.Digest);
+            var updaterProcess = Process.Start(restartInfo);
+            if (updaterProcess is null)
+                throw new InvalidOperationException("The update helper process could not be started.");
             Shutdown();
         }
         catch (Exception ex)
         {
             LogUpdateError(ex);
             MessageBox.Show(mainWindow,
-                localization.GetString("UpdateCheckFailedMessage"),
+                localization.GetString("UpdateApplyFailedMessage"),
                 localization.GetString("UpdateAvailableTitle"),
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private static async Task ApplyUpdateAsync(int processId, string targetPath, string updatePath, string expectedDigest)
+    {
+        var target = Path.GetFullPath(targetPath);
+        var update = Path.GetFullPath(updatePath);
+        if (!File.Exists(update))
+            throw new FileNotFoundException("The verified update file is missing.", update);
+        if (!string.Equals(Path.GetFileName(target), "AlphaLedger.App.exe", StringComparison.OrdinalIgnoreCase) ||
+            !Path.GetFileName(update).StartsWith("AlphaLedger-Update-", StringComparison.OrdinalIgnoreCase) ||
+            !expectedDigest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("The update target or source path is invalid.");
+
+        try
+        {
+            using var runningApplication = Process.GetProcessById(processId);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            await runningApplication.WaitForExitAsync(timeout.Token);
+        }
+        catch (ArgumentException)
+        {
+        }
+
+        var replacement = target + ".update";
+        try
+        {
+            await using var updateStream = File.OpenRead(update);
+            var actualHash = await System.Security.Cryptography.SHA256.HashDataAsync(updateStream);
+            var actualDigest = $"sha256:{Convert.ToHexString(actualHash).ToLowerInvariant()}";
+            if (!string.Equals(actualDigest, expectedDigest, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("The update file failed its SHA-256 integrity check.");
+
+            File.Copy(update, replacement, overwrite: true);
+            File.Move(replacement, target, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(replacement))
+                File.Delete(replacement);
+        }
+
+        var restartedApplication = Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+        if (restartedApplication is null)
+            throw new InvalidOperationException("The updated application could not be restarted.");
     }
 
     private static void LogUpdateError(Exception exception)

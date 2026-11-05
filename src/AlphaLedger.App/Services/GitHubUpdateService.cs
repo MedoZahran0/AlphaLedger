@@ -11,7 +11,7 @@ namespace AlphaLedger.App.Services;
 public sealed class GitHubUpdateService : IDisposable
 {
     private const string ReleaseApiUrl = "https://api.github.com/repos/MedoZahran0/AlphaLedger/releases/latest";
-    private const string InstallerFileName = "AlphaLedger-Setup.exe";
+    private const string UpdateFileName = "AlphaLedger-Update.exe";
     private const long MaximumInstallerSize = 250 * 1024 * 1024;
     private readonly HttpClient _httpClient;
 
@@ -40,10 +40,10 @@ public sealed class GitHubUpdateService : IDisposable
             return null;
 
         var asset = release.Assets.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, InstallerFileName, StringComparison.Ordinal));
+            string.Equals(candidate.Name, UpdateFileName, StringComparison.Ordinal));
         if (asset is null || !Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var downloadUri) ||
             downloadUri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidDataException($"The latest release does not contain a valid {InstallerFileName} asset.");
+            throw new InvalidDataException($"The latest release does not contain a valid {UpdateFileName} asset.");
 
         var digest = asset.Digest;
         if (string.IsNullOrWhiteSpace(digest) ||
@@ -53,11 +53,14 @@ public sealed class GitHubUpdateService : IDisposable
         return new ReleaseUpdate(release.TagName, releaseVersion, downloadUri, digest);
     }
 
-    public async Task<string> DownloadInstallerAsync(ReleaseUpdate update, CancellationToken cancellationToken = default)
+    public async Task<string> DownloadUpdateAsync(
+        ReleaseUpdate update,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         var directory = Path.Combine(Path.GetTempPath(), "AlphaLedger", "Updates");
         Directory.CreateDirectory(directory);
-        var installerPath = Path.Combine(directory, $"{InstallerFileName[..^4]}-{update.Version}.exe");
+        var updatePath = Path.Combine(directory, $"{UpdateFileName[..^4]}-{update.Version}.exe");
 
         try
         {
@@ -67,11 +70,12 @@ public sealed class GitHubUpdateService : IDisposable
                 cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            if (response.Content.Headers.ContentLength is > MaximumInstallerSize)
-                throw new InvalidDataException("The downloaded installer exceeds the allowed size.");
+            var totalBytesExpected = response.Content.Headers.ContentLength;
+            if (totalBytesExpected is > MaximumInstallerSize)
+                throw new InvalidDataException("The downloaded update exceeds the allowed size.");
 
             await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken))
-            await using (var destination = new FileStream(installerPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (var destination = new FileStream(updatePath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 var buffer = new byte[81920];
                 long totalBytes = 0;
@@ -80,22 +84,23 @@ public sealed class GitHubUpdateService : IDisposable
                 {
                     totalBytes += bytesRead;
                     if (totalBytes > MaximumInstallerSize)
-                        throw new InvalidDataException("The downloaded installer exceeds the allowed size.");
+                        throw new InvalidDataException("The downloaded update exceeds the allowed size.");
                     await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                    progress?.Report(new DownloadProgress(totalBytes, totalBytesExpected));
                 }
             }
 
-            await using var installer = File.OpenRead(installerPath);
-            var hash = await SHA256.HashDataAsync(installer, cancellationToken);
+            await using var updateStream = File.OpenRead(updatePath);
+            var hash = await SHA256.HashDataAsync(updateStream, cancellationToken);
             var actualDigest = $"sha256:{Convert.ToHexString(hash).ToLowerInvariant()}";
             if (!string.Equals(actualDigest, update.Digest, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("The downloaded installer failed its SHA-256 integrity check.");
+                throw new InvalidDataException("The downloaded update failed its SHA-256 integrity check.");
 
-            return installerPath;
+            return updatePath;
         }
         catch
         {
-            File.Delete(installerPath);
+            File.Delete(updatePath);
             throw;
         }
     }
@@ -121,6 +126,7 @@ public sealed class GitHubUpdateService : IDisposable
     public void Dispose() => _httpClient.Dispose();
 
     public sealed record ReleaseUpdate(string TagName, Version Version, Uri DownloadUri, string Digest);
+    public sealed record DownloadProgress(long BytesReceived, long? TotalBytes);
 
     private sealed class GitHubRelease
     {

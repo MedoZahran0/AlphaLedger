@@ -13,6 +13,7 @@ Uninstalling the application does not remove its database, archive, or backup da
 Online updates use public GitHub Releases for MedoZahran0/AlphaLedger. To publish a
 release, update the Version in src\AlphaLedger.App\AlphaLedger.App.csproj, push a tag
 matching that version (for example v1.0.1), and the GitHub Actions release workflow
-will build and attach AlphaLedger-Setup.exe. Installed copies check for a newer
-release at startup, ask before downloading, verify the installer SHA-256 digest, and
-launch the installer after verification.
+will build and attach AlphaLedger-Setup.exe and AlphaLedger-Update.exe. Installed
+copies check for a newer release at startup, ask before downloading, show download
+progress, verify the update SHA-256 digest, then ask before restarting into the
+updated application. The setup executable is only needed for the initial install.

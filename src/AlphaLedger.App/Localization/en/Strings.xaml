@@ -400,8 +400,14 @@
     <system:String x:Key="SettingsPickDocumentFolder">Select the company document storage folder</system:String>
     <system:String x:Key="SettingsSystemInfo">⚙ Database and System Path Information</system:String>
     <system:String x:Key="UpdateAvailableTitle">Update available</system:String>
-    <system:String x:Key="UpdateAvailableMessage">A newer version ({0}) is available. Would you like to download the update and launch its installer?</system:String>
-    <system:String x:Key="UpdateCheckFailedMessage">The update could not be downloaded or verified. It was not installed; check your internet connection or the application error log.</system:String>
+    <system:String x:Key="UpdateAvailableMessage">A newer version ({0}) is available. Would you like to download the update?</system:String>
+    <system:String x:Key="UpdateCheckFailedMessage">The update could not be downloaded or verified. It was not applied; check your internet connection or the application error log.</system:String>
+    <system:String x:Key="UpdateApplyFailedMessage">The update could not be applied. Your current installation was not replaced; check the application error log.</system:String>
+    <system:String x:Key="UpdateReadyRestartMessage">The update ({0}) is downloaded and verified. Would you like to restart the app now to apply it?</system:String>
+    <system:String x:Key="UpdateProgressTitle">Updating Alpha Ledger</system:String>
+    <system:String x:Key="UpdateProgressMessage">Downloading update...</system:String>
+    <system:String x:Key="UpdateProgressPreparing">Connecting to the update server...</system:String>
+    <system:String x:Key="UpdateProgressDownloaded">Downloaded {0} of {1}</system:String>
     <system:String x:Key="SettingsDatabasePath">SQLite Database Path:</system:String>
     <system:String x:Key="SettingsAppDataPath">Application Data Folder (AppData):</system:String>
     <system:String x:Key="SettingsSystemStatus">System Status:</system:String>
