@@ -33,7 +33,6 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private decimal _outstandingFees;
     [ObservableProperty] private int _overdueOperations;
     [ObservableProperty] private int _upcomingDeadlines;
-    [ObservableProperty] private bool _hasAnyCompanies;
     [ObservableProperty] private string _statusMessage = string.Empty;
 
     public ObservableCollection<CompanyListItem> RecentCompanies { get; } = [];
@@ -48,7 +47,6 @@ public partial class DashboardViewModel : ObservableObject
             var all = await _companies.GetCompaniesAsync(new CompanyFilter { IncludeArchived = true });
             var active = all.Where(c => !c.IsArchived).ToList();
 
-            HasAnyCompanies = all.Count > 0;
             ActiveCompanies = active.Count;
             ArchivedCompanies = all.Count - active.Count;
             TotalFees = active.Sum(c => c.TotalAgreedFees);
