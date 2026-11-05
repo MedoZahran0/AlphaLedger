@@ -4,6 +4,7 @@ using AlphaLedger.Core.Models;
 using AlphaLedger.Infrastructure;
 using AlphaLedger.Infrastructure.Data;
 using AlphaLedger.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AlphaLedger.Tests;
@@ -47,7 +48,7 @@ public class TestAppPaths : IAppPaths
 public class CompanyWorkflowTests
 {
     [Fact]
-    public async Task Archive_Uses_Selected_Start_Year_And_Creates_Standard_Company_Folders()
+    public async Task Archive_Folders_Are_Created_Only_When_Explicitly_Requested()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"al-archive-{Guid.NewGuid():N}");
         var docsRoot = Path.Combine(tempDir, "Archive");
@@ -86,10 +87,12 @@ public class CompanyWorkflowTests
                 archiveStartYear.ToString(),
                 folderService.BuildCompanyFolderName(company.DisplayName, company.Code));
             Assert.Equal(archiveStartYear, company.ArchiveStartYear);
-            Assert.Equal(expectedArchivePath, company.DocumentStoragePath);
-            Assert.True(Directory.Exists(expectedArchivePath));
-            Assert.Contains("01 - مستندات الشركة العامة", Directory.GetDirectories(expectedArchivePath).Select(Path.GetFileName));
-            Assert.Contains("99 - المحذوفات", Directory.GetDirectories(expectedArchivePath).Select(Path.GetFileName));
+            Assert.Null(company.DocumentStoragePath);
+            Assert.False(Directory.Exists(expectedArchivePath));
+            Assert.Null(await db.CompanyFiscalYears
+                .Where(year => year.CompanyId == company.Id)
+                .Select(year => year.FolderPath)
+                .SingleAsync());
 
             var secondCompany = await companyService.CreateCompanyAsync(new CompanyEditModel
             {
@@ -97,8 +100,18 @@ public class CompanyWorkflowTests
                 ArchiveStartYear = archiveStartYear,
                 CreateCurrentFiscalYear = false
             });
-            Assert.Equal(Path.GetDirectoryName(expectedArchivePath), Path.GetDirectoryName(secondCompany.DocumentStoragePath));
-            Assert.NotEqual(company.DocumentStoragePath, secondCompany.DocumentStoragePath);
+            Assert.Null(secondCompany.DocumentStoragePath);
+            Assert.False(Directory.Exists(expectedArchivePath));
+
+            await archiveService.EnsureCurrentYearStructureAsync();
+            Assert.True(Directory.Exists(Path.Combine(docsRoot, currentYear.ToString())));
+            Assert.False(Directory.Exists(expectedArchivePath));
+
+            await archiveService.EnsureCompanyFoldersAsync(company.Id, company.Code);
+            Assert.Equal(expectedArchivePath, company.DocumentStoragePath);
+            Assert.True(Directory.Exists(expectedArchivePath));
+            Assert.Contains("01 - مستندات الشركة العامة", Directory.GetDirectories(expectedArchivePath).Select(Path.GetFileName));
+            Assert.Contains("99 - المحذوفات", Directory.GetDirectories(expectedArchivePath).Select(Path.GetFileName));
 
             var nextYear = currentYear + 1;
             var fiscalYear = await companyService.AddFiscalYearAsync(company.Id, new FiscalYearEditModel

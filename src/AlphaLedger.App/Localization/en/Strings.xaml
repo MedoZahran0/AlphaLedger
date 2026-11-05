@@ -71,6 +71,8 @@
     <system:String x:Key="CompaniesEdit">✏️ Edit Company</system:String>
     <system:String x:Key="CompaniesOpenFolder">📂 Open Company Archive</system:String>
     <system:String x:Key="CompaniesOpenOnDisk">📁 Open on drive</system:String>
+    <system:String x:Key="CompaniesCreateArchiveFolders">Create archive folders for this company</system:String>
+    <system:String x:Key="CompaniesArchiveFoldersCreated">Archive folders for “{0}” were created in its selected archive year.</system:String>
     <system:String x:Key="CompaniesDeleteConfirm">Permanently delete company “{0}” from the program? Its related data will be removed, but its archive files on disk will remain.</system:String>
     <system:String x:Key="CompaniesDeleted">Company deleted. Its archive files on disk were not removed.</system:String>
     <system:String x:Key="CompaniesLocateFolder">🔗 Link Missing Folder...</system:String>

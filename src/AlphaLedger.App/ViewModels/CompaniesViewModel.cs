@@ -59,28 +59,7 @@ public partial class CompaniesViewModel : ObservableObject
     {
         try
         {
-            var filter = new CompanyFilter
-            {
-                SearchText = SearchText,
-                IncludeArchived = IncludeArchived,
-                AssignedEmployeeId = (SelectedEmployeeId.HasValue && SelectedEmployeeId.Value != Guid.Empty) ? SelectedEmployeeId.Value : null
-            };
-
-            var list = await _companies.GetCompaniesAsync(filter);
-            Items.Clear();
-            foreach (var item in list)
-            {
-                Items.Add(item);
-            }
-
-            Count = Items.Count;
-            Status = string.Format(CultureInfo.CurrentCulture,
-                Text(IncludeArchived ? "CompaniesRecordCount" : "CompaniesActiveCount"), Count);
-
-            if (Employees.Count == 0)
-            {
-                await LoadEmployeesAsync();
-            }
+            await ReloadItemsAsync();
         }
         catch (Exception ex)
         {
@@ -226,6 +205,32 @@ public partial class CompaniesViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task CreateArchiveFoldersAsync()
+    {
+        var company = Selected;
+        if (company is null)
+        {
+            _dialogs.Warning(Text("CompaniesSelectCompany"));
+            return;
+        }
+
+        try
+        {
+            await _archive.EnsureCompanyFoldersAsync(company.Id, company.Code);
+            await ReloadItemsAsync();
+            Selected = Items.FirstOrDefault(item => item.Id == company.Id);
+            _dialogs.Info(string.Format(
+                CultureInfo.CurrentCulture,
+                Text("CompaniesArchiveFoldersCreated"),
+                company.DisplayName));
+        }
+        catch (Exception ex)
+        {
+            _dialogs.Error(ex.Message);
+        }
+    }
+
+    [RelayCommand]
     public async Task LocateFolderAsync()
     {
         if (Selected is null)
@@ -292,6 +297,32 @@ public partial class CompaniesViewModel : ObservableObject
         catch (Exception ex)
         {
             _dialogs.Error(ex.Message);
+        }
+    }
+
+    private async Task ReloadItemsAsync()
+    {
+        var filter = new CompanyFilter
+        {
+            SearchText = SearchText,
+            IncludeArchived = IncludeArchived,
+            AssignedEmployeeId = (SelectedEmployeeId.HasValue && SelectedEmployeeId.Value != Guid.Empty) ? SelectedEmployeeId.Value : null
+        };
+
+        var list = await _companies.GetCompaniesAsync(filter);
+        Items.Clear();
+        foreach (var item in list)
+        {
+            Items.Add(item);
+        }
+
+        Count = Items.Count;
+        Status = string.Format(CultureInfo.CurrentCulture,
+            Text(IncludeArchived ? "CompaniesRecordCount" : "CompaniesActiveCount"), Count);
+
+        if (Employees.Count == 0)
+        {
+            await LoadEmployeesAsync();
         }
     }
 

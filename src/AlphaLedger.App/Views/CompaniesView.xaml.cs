@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AlphaLedger.App.ViewModels;
@@ -24,5 +25,18 @@ public partial class CompaniesView : UserControl
         {
             vm.OpenProfile();
         }
+    }
+
+    private void CompaniesGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not DataGrid grid ||
+            ItemsControl.ContainerFromElement(grid, e.OriginalSource as DependencyObject) is not DataGridRow row)
+        {
+            return;
+        }
+
+        grid.SelectedItem = row.Item;
+        row.IsSelected = true;
+        row.Focus();
     }
 }

@@ -140,7 +140,7 @@ public sealed class CompanyService : ICompanyService
         Validate(model);
         await EnsureNoUnexpectedDuplicates(model, cancellationToken);
 
-        var documentRoot = await RequireDocumentRoot(cancellationToken);
+        await RequireDocumentRoot(cancellationToken);
         var now = _clock.UtcNow;
         var employeeId = await ResolveEmployeeAsync(model, cancellationToken);
 
@@ -177,25 +177,12 @@ public sealed class CompanyService : ICompanyService
             };
 
             _db.Companies.Add(company);
-            CompanyFiscalYear? year = null;
             if (model.CreateCurrentFiscalYear)
             {
-                year = BuildDefaultFiscalYear(company.Id, model);
+                var year = BuildDefaultFiscalYear(company.Id, model);
                 _db.CompanyFiscalYears.Add(year);
             }
 
-            await _db.SaveChangesAsync(cancellationToken);
-
-            company.DocumentStoragePath = _folders.EnsureCompanyFolder(
-                documentRoot,
-                company.ArchiveStartYear.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                company);
-            if (year is not null)
-            {
-                year.FolderPath = _folders.EnsureFiscalYearFolder(documentRoot, company, year);
-            }
-
-            company.UpdatedAtUtc = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);

@@ -96,14 +96,17 @@
                   ItemsSource="{Binding Items}"
                   SelectedItem="{Binding Selected, Mode=TwoWay}"
                   MouseDoubleClick="CompaniesGrid_MouseDoubleClick"
+                  PreviewMouseRightButtonDown="CompaniesGrid_PreviewMouseRightButtonDown"
                   Margin="12" Background="White">
             <DataGrid.ContextMenu>
-                <ContextMenu FlowDirection="{loc:FlowDirection}" loc:LocalizationExtensions.BindFlowDirection="True">
+                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                             FlowDirection="{loc:FlowDirection}" loc:LocalizationExtensions.BindFlowDirection="True">
                     <MenuItem Header="{DynamicResource CompaniesOpenProfile}" Command="{Binding OpenProfileCommand}" FontWeight="Bold"/>
                     <Separator/>
                     <MenuItem Header="{DynamicResource CompaniesEdit}" Command="{Binding EditCommand}"/>
                     <MenuItem Header="{DynamicResource CompaniesOpenFolder}" Command="{Binding OpenFolderCommand}"/>
                     <MenuItem Header="{DynamicResource CompaniesOpenOnDisk}" Command="{Binding OpenFolderOnDiskCommand}"/>
+                    <MenuItem Header="{DynamicResource CompaniesCreateArchiveFolders}" Command="{Binding CreateArchiveFoldersCommand}"/>
                     <MenuItem Header="{DynamicResource CompaniesLocateFolder}" Command="{Binding LocateFolderCommand}"/>
                     <Separator/>
                     <MenuItem Header="{DynamicResource CompaniesArchive}" Command="{Binding ArchiveCommand}"/>

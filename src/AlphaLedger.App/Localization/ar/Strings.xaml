@@ -71,6 +71,8 @@
     <system:String x:Key="CompaniesEdit">✏️ تعديل الشركة</system:String>
     <system:String x:Key="CompaniesOpenFolder">📂 فتح أرشيف الشركة</system:String>
     <system:String x:Key="CompaniesOpenOnDisk">📁 فتح على الهارد</system:String>
+    <system:String x:Key="CompaniesCreateArchiveFolders">إنشاء مجلدات أرشيف لهذه الشركة</system:String>
+    <system:String x:Key="CompaniesArchiveFoldersCreated">تم إنشاء مجلدات أرشيف «{0}» في سنة الأرشيف المحددة.</system:String>
     <system:String x:Key="CompaniesDeleteConfirm">هل تريد حذف الشركة «{0}» نهائيًا من البرنامج؟ ستُحذف البيانات المرتبطة بها، لكن ملفات الأرشيف على الهارد ستظل كما هي.</system:String>
     <system:String x:Key="CompaniesDeleted">تم حذف الشركة. ملفات أرشيفها على الهارد لم تُحذف.</system:String>
     <system:String x:Key="CompaniesLocateFolder">🔗 ربط مجلد مفقود...</system:String>
