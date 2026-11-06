@@ -421,6 +421,7 @@
     <system:String x:Key="SettingsSavedMessage">تم حفظ إعدادات النظام وتحديث مسارات المستندات واللغة.</system:String>
 
     <!-- ARCHIVE -->
+    <system:String x:Key="ArchiveSelectYear">اختر سنة الأرشيف</system:String>
     <system:String x:Key="ArchiveAdd">إضافة</system:String>
     <system:String x:Key="ArchiveAddFiles">إضافة ملفات</system:String>
     <system:String x:Key="ArchiveNewFolder">مجلد</system:String>

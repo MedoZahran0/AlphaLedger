@@ -44,12 +44,70 @@
             </WrapPanel>
         </Border>
         <Grid Grid.Row="1" Margin="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="320"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Margin="0,0,8,0">
-                <TreeView ItemsSource="{Binding TreeNodes}" SelectedItemChanged="FolderTree_SelectedItemChanged" BorderThickness="0">
+            <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,8">
+                <TextBlock Text="{DynamicResource ArchiveSelectYear}" FontWeight="SemiBold" Margin="2,0,0,4"/>
+                <ListBox ItemsSource="{Binding TreeNodes}"
+                         SelectedItem="{Binding SelectedYearNode, Mode=TwoWay}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                         BorderThickness="0"
+                         Background="Transparent">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="14,7"/>
+                            <Setter Property="Margin" Value="0,0,6,0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="TabBorder"
+                                                Background="White"
+                                                BorderBrush="{StaticResource BorderBrushKey}"
+                                                BorderThickness="1"
+                                                CornerRadius="4,4,0,0"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource NavyBrush}"/>
+                                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{StaticResource NavyBrush}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{StaticResource NavyBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" MinWidth="42" TextAlignment="Center"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+            <Border Grid.Row="1" Grid.Column="0" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Margin="0,0,8,0">
+                <TreeView ItemsSource="{Binding SelectedYearNode.Children}" SelectedItemChanged="FolderTree_SelectedItemChanged" BorderThickness="0">
                     <TreeView.Resources>
                         <HierarchicalDataTemplate DataType="{x:Type vm:ArchiveFolderNode}" ItemsSource="{Binding Children}">
                             <StackPanel Orientation="Horizontal">
@@ -90,7 +148,7 @@
                     </TreeView.Resources>
                 </TreeView>
             </Border>
-            <Border Grid.Column="1" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1">
+            <Border Grid.Row="1" Grid.Column="1" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

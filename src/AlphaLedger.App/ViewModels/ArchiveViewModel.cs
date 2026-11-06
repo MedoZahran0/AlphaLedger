@@ -46,6 +46,7 @@ public partial class ArchiveViewModel : ObservableObject
 
     [ObservableProperty] private string _archiveRoot = string.Empty;
     [ObservableProperty] private ArchiveFolderNode? _selectedFolder;
+    [ObservableProperty] private ArchiveFolderNode? _selectedYearNode;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private ArchiveFileItem? _selectedFile;
@@ -82,21 +83,23 @@ public partial class ArchiveViewModel : ObservableObject
 
         var companies = await _companyService.GetCompaniesAsync(new CompanyFilter());
         var currentYear = _folderService.CurrentYearLabel;
-
-        TreeNodes.Clear();
-        var yearDirectories = Directory.EnumerateDirectories(ArchiveRoot)
-            .Where(directory => IsYearFolder(Path.GetFileName(directory)))
-            .OrderByDescending(directory => Path.GetFileName(directory), StringComparer.OrdinalIgnoreCase)
+        var yearLabels = Directory.EnumerateDirectories(ArchiveRoot)
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Where(IsYearFolder)
+            .Concat(companies.Select(company =>
+                (company.ArchiveStartYear ?? int.Parse(currentYear, System.Globalization.CultureInfo.InvariantCulture))
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)))
+            .Append(currentYear)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(year => year, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (!yearDirectories.Any(directory => string.Equals(Path.GetFileName(directory), currentYear, StringComparison.OrdinalIgnoreCase)))
-        {
-            yearDirectories.Insert(0, _folderService.EnsureYearFolder(ArchiveRoot, currentYear));
-        }
+        TreeNodes.Clear();
 
-        foreach (var yearDirectory in yearDirectories)
+        foreach (var yearName in yearLabels)
         {
-            var yearName = Path.GetFileName(yearDirectory);
+            var yearDirectory = _folderService.EnsureYearFolder(ArchiveRoot, yearName);
             var yearNode = new ArchiveFolderNode
             {
                 Name = yearName,
@@ -127,17 +130,22 @@ public partial class ArchiveViewModel : ObservableObject
             TreeNodes.Add(yearNode);
         }
 
+        SelectedYearNode = previousPath is null
+            ? null
+            : TreeNodes.FirstOrDefault(node => IsWithinYear(previousPath, node.FullPath));
+        SelectedYearNode ??= TreeNodes.FirstOrDefault(node =>
+            string.Equals(node.Name, currentYear, StringComparison.OrdinalIgnoreCase))
+            ?? TreeNodes.FirstOrDefault();
+
         if (previousPath is not null)
         {
             SelectedFolder = FindFolder(previousPath)
                 ?? FindCompanyNode(previousCompanyId)
-                ?? TreeNodes.FirstOrDefault(node => string.Equals(node.Name, currentYear, StringComparison.OrdinalIgnoreCase))
-                ?? TreeNodes.FirstOrDefault();
+                ?? SelectedYearNode;
         }
         else
         {
-            SelectedFolder = TreeNodes.FirstOrDefault(node => string.Equals(node.Name, currentYear, StringComparison.OrdinalIgnoreCase))
-                ?? TreeNodes.FirstOrDefault();
+            SelectedFolder = SelectedYearNode;
         }
 
         await LoadFilesAsync();
@@ -170,6 +178,12 @@ public partial class ArchiveViewModel : ObservableObject
     {
         if (newValue is not null)
         {
+            var yearNode = TreeNodes.FirstOrDefault(node => IsWithinYear(newValue.FullPath, node.FullPath));
+            if (yearNode is not null && !ReferenceEquals(SelectedYearNode, yearNode))
+            {
+                SelectedYearNode = yearNode;
+            }
+
             SelectedCompanyId = newValue.CompanyId;
             SelectedCompanyCode = newValue.CompanyCode;
         }
@@ -181,6 +195,15 @@ public partial class ArchiveViewModel : ObservableObject
         NotifyNavigationCommands();
         OpenCompanyArchiveOnDiskCommand.NotifyCanExecuteChanged();
         _ = LoadFilesAsync();
+    }
+
+    partial void OnSelectedYearNodeChanged(ArchiveFolderNode? value)
+    {
+        if (value is not null &&
+            (SelectedFolder is null || !IsWithinYear(SelectedFolder.FullPath, value.FullPath)))
+        {
+            SelectedFolder = value;
+        }
     }
 
     partial void OnSelectedCompanyIdChanged(Guid value)
@@ -1122,6 +1145,12 @@ public partial class ArchiveViewModel : ObservableObject
 
     private static bool IsYearFolder(string name)
         => name.Length == 4 && int.TryParse(name, out var year) && year is >= 1900 and <= 2999;
+
+    private static bool IsWithinYear(string path, string yearPath)
+        => string.Equals(path, yearPath, StringComparison.OrdinalIgnoreCase) ||
+           path.StartsWith(
+               Path.TrimEndingDirectorySeparator(yearPath) + Path.DirectorySeparatorChar,
+               StringComparison.OrdinalIgnoreCase);
 }
 
 public partial class ArchiveFolderNode : ObservableObject

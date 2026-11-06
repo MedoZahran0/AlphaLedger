@@ -420,6 +420,7 @@
     <system:String x:Key="SettingsSavedMessage">System settings saved and document paths and language updated.</system:String>
 
     <!-- ARCHIVE -->
+    <system:String x:Key="ArchiveSelectYear">Select archive year</system:String>
     <system:String x:Key="ArchiveAdd">Add</system:String>
     <system:String x:Key="ArchiveAddFiles">Add files</system:String>
     <system:String x:Key="ArchiveNewFolder">New folder</system:String>

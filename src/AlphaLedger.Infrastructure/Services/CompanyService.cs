@@ -101,6 +101,7 @@ public sealed class CompanyService : ICompanyService
                     .Select(t => (DateOnly?)t.FilingDueDate)
                     .FirstOrDefault(),
                 IsArchived = c.IsArchived,
+                ArchiveStartYear = c.ArchiveStartYear,
                 DocumentStoragePath = c.DocumentStoragePath
             })
             .OrderBy(c => c.DisplayName)

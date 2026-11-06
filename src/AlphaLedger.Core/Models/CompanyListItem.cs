@@ -20,6 +20,7 @@ public class CompanyListItem
     public DateOnly? NextTaxDeadline { get; set; }
     public bool IsArchived { get; set; }
     public string StatusText => IsArchived ? "مؤرشف" : "نشط";
+    public int? ArchiveStartYear { get; set; }
     public string? DocumentStoragePath { get; set; }
     public bool FolderMissing { get; set; }
     public string FolderStatusText => FolderMissing ? "مفقود" : "متوفر";
