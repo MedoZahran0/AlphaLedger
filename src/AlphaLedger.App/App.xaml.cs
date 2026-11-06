@@ -244,7 +244,7 @@ public partial class App : Application
         if (answer != MessageBoxResult.Yes)
             return;
 
-        string updatePath;
+        GitHubUpdateService.DownloadedUpdate downloadedUpdate;
         var progressWindow = new UpdateProgressWindow
         {
             Owner = mainWindow
@@ -253,7 +253,7 @@ public partial class App : Application
         try
         {
             var progress = new Progress<GitHubUpdateService.DownloadProgress>(progressWindow.ReportProgress);
-            updatePath = await updater.DownloadUpdateAsync(update, progress);
+            downloadedUpdate = await updater.DownloadUpdateAsync(update, progress);
         }
         catch (Exception ex)
         {
@@ -279,16 +279,9 @@ public partial class App : Application
         {
             var currentExecutable = Environment.ProcessPath
                 ?? throw new InvalidOperationException("The current application executable path could not be determined.");
-            var restartInfo = new ProcessStartInfo(updatePath)
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            restartInfo.ArgumentList.Add("--apply-update");
-            restartInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
-            restartInfo.ArgumentList.Add(currentExecutable);
-            restartInfo.ArgumentList.Add(updatePath);
-            restartInfo.ArgumentList.Add(update.Digest);
+            var restartInfo = downloadedUpdate.IsDelta
+                ? CreateDeltaUpdaterStartInfo(downloadedUpdate, update, currentExecutable)
+                : CreateFullUpdaterStartInfo(downloadedUpdate.UpdatePath, update.Digest, currentExecutable);
             var updaterProcess = Process.Start(restartInfo);
             if (updaterProcess is null)
                 throw new InvalidOperationException("The update helper process could not be started.");
@@ -302,6 +295,58 @@ public partial class App : Application
                 localization.GetString("UpdateAvailableTitle"),
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private static ProcessStartInfo CreateFullUpdaterStartInfo(
+        string updatePath,
+        string expectedDigest,
+        string currentExecutable)
+    {
+        var startInfo = new ProcessStartInfo(updatePath)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("--apply-update");
+        startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+        startInfo.ArgumentList.Add(currentExecutable);
+        startInfo.ArgumentList.Add(updatePath);
+        startInfo.ArgumentList.Add(expectedDigest);
+        return startInfo;
+    }
+
+    private static ProcessStartInfo CreateDeltaUpdaterStartInfo(
+        GitHubUpdateService.DownloadedUpdate downloadedUpdate,
+        GitHubUpdateService.ReleaseUpdate update,
+        string currentExecutable)
+    {
+        var patcherPath = downloadedUpdate.PatcherPath
+            ?? throw new InvalidOperationException("The verified update patcher is missing.");
+        var startInfo = new ProcessStartInfo("powershell.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("-NoProfile");
+        startInfo.ArgumentList.Add("-NonInteractive");
+        startInfo.ArgumentList.Add("-ExecutionPolicy");
+        startInfo.ArgumentList.Add("Bypass");
+        startInfo.ArgumentList.Add("-WindowStyle");
+        startInfo.ArgumentList.Add("Hidden");
+        startInfo.ArgumentList.Add("-File");
+        startInfo.ArgumentList.Add(patcherPath);
+        startInfo.ArgumentList.Add("-ProcessId");
+        startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+        startInfo.ArgumentList.Add("-TargetPath");
+        startInfo.ArgumentList.Add(currentExecutable);
+        startInfo.ArgumentList.Add("-DeltaPath");
+        startInfo.ArgumentList.Add(downloadedUpdate.UpdatePath);
+        startInfo.ArgumentList.Add("-DeltaDigest");
+        startInfo.ArgumentList.Add(update.DeltaDigest
+            ?? throw new InvalidOperationException("The update delta digest is missing."));
+        startInfo.ArgumentList.Add("-TargetDigest");
+        startInfo.ArgumentList.Add(update.Digest);
+        return startInfo;
     }
 
     private static async Task ApplyUpdateAsync(int processId, string targetPath, string updatePath, string expectedDigest)

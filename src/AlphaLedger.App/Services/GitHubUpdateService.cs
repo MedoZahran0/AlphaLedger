@@ -12,6 +12,7 @@ public sealed class GitHubUpdateService : IDisposable
 {
     private const string ReleaseApiUrl = "https://api.github.com/repos/MedoZahran0/AlphaLedger/releases/latest";
     private const string UpdateFileName = "AlphaLedger-Update.exe";
+    private const string PatcherFileName = "AlphaLedger-Patcher.ps1";
     private const long MaximumInstallerSize = 250 * 1024 * 1024;
     private readonly HttpClient _httpClient;
 
@@ -39,33 +40,88 @@ public sealed class GitHubUpdateService : IDisposable
             releaseVersion <= GetCurrentVersion())
             return null;
 
-        var asset = release.Assets.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, UpdateFileName, StringComparison.Ordinal));
-        if (asset is null || !Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var downloadUri) ||
-            downloadUri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidDataException($"The latest release does not contain a valid {UpdateFileName} asset.");
+        var fullAsset = release.Assets.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, UpdateFileName, StringComparison.Ordinal))
+            ?? throw new InvalidDataException($"The latest release does not contain {UpdateFileName}.");
+        var fullUri = GetHttpsAssetUri(fullAsset);
+        var fullDigest = RequireSha256(fullAsset);
 
-        var digest = asset.Digest;
-        if (string.IsNullOrWhiteSpace(digest) ||
-            !digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("The installer release asset is missing its SHA-256 digest.");
+        var deltaName = $"AlphaLedger-Update-from-v{GetCurrentVersion().ToString(3)}.delta";
+        var deltaAsset = release.Assets.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, deltaName, StringComparison.Ordinal));
+        var patcherAsset = release.Assets.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, PatcherFileName, StringComparison.Ordinal));
 
-        return new ReleaseUpdate(release.TagName, releaseVersion, downloadUri, digest);
+        if (deltaAsset is null || patcherAsset is null)
+            return new ReleaseUpdate(release.TagName, releaseVersion, fullUri, fullDigest, null, null, null, null);
+
+        return new ReleaseUpdate(
+            release.TagName,
+            releaseVersion,
+            fullUri,
+            fullDigest,
+            GetHttpsAssetUri(deltaAsset),
+            RequireSha256(deltaAsset),
+            GetHttpsAssetUri(patcherAsset),
+            RequireSha256(patcherAsset));
     }
 
-    public async Task<string> DownloadUpdateAsync(
+    public async Task<DownloadedUpdate> DownloadUpdateAsync(
         ReleaseUpdate update,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var directory = Path.Combine(Path.GetTempPath(), "AlphaLedger", "Updates");
         Directory.CreateDirectory(directory);
-        var updatePath = Path.Combine(directory, $"{UpdateFileName[..^4]}-{update.Version}.exe");
 
+        if (update.DeltaDownloadUri is not null &&
+            update.DeltaDigest is not null &&
+            update.PatcherDownloadUri is not null &&
+            update.PatcherDigest is not null)
+        {
+            var deltaPath = await DownloadAndVerifyAssetAsync(
+                update.DeltaDownloadUri,
+                update.DeltaDigest,
+                Path.Combine(directory, $"AlphaLedger-Update-{update.Version}.delta"),
+                progress,
+                cancellationToken);
+            try
+            {
+                var patcherPath = await DownloadAndVerifyAssetAsync(
+                    update.PatcherDownloadUri,
+                    update.PatcherDigest,
+                    Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(PatcherFileName)}-{update.Version}.ps1"),
+                    progress,
+                    cancellationToken);
+                return new DownloadedUpdate(deltaPath, patcherPath, true);
+            }
+            catch
+            {
+                File.Delete(deltaPath);
+                throw;
+            }
+        }
+
+        var fullPath = await DownloadAndVerifyAssetAsync(
+            update.DownloadUri,
+            update.Digest,
+            Path.Combine(directory, $"{UpdateFileName[..^4]}-{update.Version}.exe"),
+            progress,
+            cancellationToken);
+        return new DownloadedUpdate(fullPath, null, false);
+    }
+
+    private async Task<string> DownloadAndVerifyAssetAsync(
+        Uri downloadUri,
+        string expectedDigest,
+        string assetPath,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken cancellationToken)
+    {
         try
         {
             using var response = await _httpClient.GetAsync(
-                update.DownloadUri,
+                downloadUri,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
             response.EnsureSuccessStatusCode();
@@ -75,7 +131,7 @@ public sealed class GitHubUpdateService : IDisposable
                 throw new InvalidDataException("The downloaded update exceeds the allowed size.");
 
             await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken))
-            await using (var destination = new FileStream(updatePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (var destination = new FileStream(assetPath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 var buffer = new byte[81920];
                 long totalBytes = 0;
@@ -90,19 +146,35 @@ public sealed class GitHubUpdateService : IDisposable
                 }
             }
 
-            await using var updateStream = File.OpenRead(updatePath);
+            await using var updateStream = File.OpenRead(assetPath);
             var hash = await SHA256.HashDataAsync(updateStream, cancellationToken);
             var actualDigest = $"sha256:{Convert.ToHexString(hash).ToLowerInvariant()}";
-            if (!string.Equals(actualDigest, update.Digest, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(actualDigest, expectedDigest, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("The downloaded update failed its SHA-256 integrity check.");
 
-            return updatePath;
+            return assetPath;
         }
         catch
         {
-            File.Delete(updatePath);
+            File.Delete(assetPath);
             throw;
         }
+    }
+
+    private static Uri GetHttpsAssetUri(GitHubReleaseAsset asset)
+    {
+        if (!Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var uri) ||
+            uri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidDataException($"The release asset {asset.Name} does not have a valid HTTPS URL.");
+        return uri;
+    }
+
+    private static string RequireSha256(GitHubReleaseAsset asset)
+    {
+        if (string.IsNullOrWhiteSpace(asset.Digest) ||
+            !asset.Digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"The release asset {asset.Name} is missing its SHA-256 digest.");
+        return asset.Digest;
     }
 
     public static Version GetCurrentVersion() =>
@@ -125,7 +197,16 @@ public sealed class GitHubUpdateService : IDisposable
 
     public void Dispose() => _httpClient.Dispose();
 
-    public sealed record ReleaseUpdate(string TagName, Version Version, Uri DownloadUri, string Digest);
+    public sealed record ReleaseUpdate(
+        string TagName,
+        Version Version,
+        Uri DownloadUri,
+        string Digest,
+        Uri? DeltaDownloadUri,
+        string? DeltaDigest,
+        Uri? PatcherDownloadUri,
+        string? PatcherDigest);
+    public sealed record DownloadedUpdate(string UpdatePath, string? PatcherPath, bool IsDelta);
     public sealed record DownloadProgress(long BytesReceived, long? TotalBytes);
 
     private sealed class GitHubRelease
