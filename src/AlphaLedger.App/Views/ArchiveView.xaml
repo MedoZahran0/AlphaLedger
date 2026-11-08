@@ -81,7 +81,6 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="{Binding Code, StringFormat=' ({0})'}" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0"/>
                             </StackPanel>
                         </HierarchicalDataTemplate>
                         <Style TargetType="TreeViewItem">

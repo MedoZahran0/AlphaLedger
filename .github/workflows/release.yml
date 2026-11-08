@@ -46,7 +46,7 @@ jobs:
             '.\Release\AlphaLedger-Setup.exe',
             '.\Release\AlphaLedger-Update.exe'
           )
-          gh release create $env:GITHUB_REF_NAME @assets --title "AlphaLedger $env:GITHUB_REF_NAME" --generate-notes
+          gh release create $env:GITHUB_REF_NAME @assets --title "AlphaLedger $env:GITHUB_REF_NAME" --notes-file ".\updates\$($env:GITHUB_REF_NAME).md"
 
       - name: Publish update manifest after release assets are available
         shell: pwsh

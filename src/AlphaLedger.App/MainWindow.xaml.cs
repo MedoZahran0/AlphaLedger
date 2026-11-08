@@ -325,6 +325,13 @@ public partial class MainWindow : Window
     {
         var view = new ArchiveView();
         var vm = CreateViewModel<ArchiveViewModel>();
+        vm.CompanyDeleted += () =>
+        {
+            if (_companiesViewModel is not null)
+                _ = _companiesViewModel.LoadAsync();
+            if (_dashboardViewModel is not null)
+                _ = _dashboardViewModel.LoadAsync();
+        };
         view.DataContext = vm;
         _ = vm.LoadAsync().ContinueWith(t =>
         {

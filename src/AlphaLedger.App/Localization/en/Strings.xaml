@@ -408,6 +408,11 @@
     <system:String x:Key="UpdateCheckFailedMessage">The update could not be downloaded or verified and was not applied. Error details:</system:String>
     <system:String x:Key="UpdateApplyFailedMessage">The update could not be applied. Your current installation was not replaced; check the application error log.</system:String>
     <system:String x:Key="UpdateReadyRestartMessage">The update ({0}) is downloaded and verified. Would you like to restart the app now to apply it?</system:String>
+    <system:String x:Key="UpdateNotesTitle">What’s new</system:String>
+    <system:String x:Key="UpdateNotesMessage">The app has been updated to version {0}. Here are the latest improvements:
+
+{1}</system:String>
+    <system:String x:Key="UpdateNotesNoDetails">The new version was installed successfully.</system:String>
     <system:String x:Key="UpdateProgressTitle">Updating Alpha Ledger</system:String>
     <system:String x:Key="UpdateProgressMessage">Downloading update...</system:String>
     <system:String x:Key="UpdateProgressChecking">Checking for updates...</system:String>
@@ -432,6 +437,9 @@
 
     <!-- ARCHIVE -->
     <system:String x:Key="ArchiveSelectYear">Select archive year</system:String>
+    <system:String x:Key="ArchiveCompanyDeleteConfirm">Permanently delete company “{0}” from the application and archive? Only its empty folders will be removed.</system:String>
+    <system:String x:Key="ArchiveCompanyDeleteHasFiles">This company cannot be deleted because its archive folders contain files. Manually delete the files from the hard drive, then try again.</system:String>
+    <system:String x:Key="ArchiveCompanyDeleteInvalid">Select a company folder inside an archive-year folder.</system:String>
     <system:String x:Key="ArchiveCopyCompaniesToYear">Copy companies to a new year</system:String>
     <system:String x:Key="ArchiveCopyYearDialogTitle">Choose the new year folder inside the archive</system:String>
     <system:String x:Key="ArchiveCopyYearConfirm">Only the folder structure for {2} companies will be copied from {0} to {1}; files and documents will not be copied. Existing folders will be merged without replacing files. Continue?</system:String>

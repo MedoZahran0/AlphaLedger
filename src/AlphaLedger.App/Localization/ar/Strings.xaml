@@ -409,6 +409,11 @@
     <system:String x:Key="UpdateCheckFailedMessage">تعذر تنزيل التحديث أو التحقق من سلامته. لم يتم تطبيقه. تفاصيل الخطأ:</system:String>
     <system:String x:Key="UpdateApplyFailedMessage">تعذر تطبيق التحديث. لم يتم استبدال النسخة الحالية؛ راجع سجل أخطاء التطبيق.</system:String>
     <system:String x:Key="UpdateReadyRestartMessage">تم تنزيل التحديث ({0}) والتحقق منه. هل تريد إعادة تشغيل البرنامج الآن لتطبيقه؟</system:String>
+    <system:String x:Key="UpdateNotesTitle">ما الجديد في التحديث</system:String>
+    <system:String x:Key="UpdateNotesMessage">تم تحديث البرنامج إلى الإصدار {0}. إليك أبرز التحديثات والتحسينات:
+
+{1}</system:String>
+    <system:String x:Key="UpdateNotesNoDetails">تم تثبيت الإصدار الجديد بنجاح.</system:String>
     <system:String x:Key="UpdateProgressTitle">تحديث Alpha Ledger</system:String>
     <system:String x:Key="UpdateProgressMessage">جارٍ تنزيل التحديث...</system:String>
     <system:String x:Key="UpdateProgressChecking">جارٍ التحقق من وجود تحديثات...</system:String>
@@ -433,6 +438,9 @@
 
     <!-- ARCHIVE -->
     <system:String x:Key="ArchiveSelectYear">اختر سنة الأرشيف</system:String>
+    <system:String x:Key="ArchiveCompanyDeleteConfirm">هل تريد حذف الشركة «{0}» نهائيًا من البرنامج والأرشيف؟ سيتم حذف مجلداتها الفارغة فقط.</system:String>
+    <system:String x:Key="ArchiveCompanyDeleteHasFiles">لا يمكن حذف الشركة لأن مجلداتها تحتوي على ملفات. احذف الملفات يدويًا من الهارد أولًا ثم حاول مرة أخرى.</system:String>
+    <system:String x:Key="ArchiveCompanyDeleteInvalid">اختر مجلد شركة داخل مجلد سنة في الأرشيف.</system:String>
     <system:String x:Key="ArchiveCopyCompaniesToYear">نسخ الشركات لسنة جديدة</system:String>
     <system:String x:Key="ArchiveCopyYearDialogTitle">اختر مجلد السنة الجديدة داخل الأرشيف</system:String>
     <system:String x:Key="ArchiveCopyYearConfirm">سيتم نسخ هيكل مجلدات {2} شركة من سنة {0} إلى سنة {1} فقط، دون نسخ الملفات أو المستندات. المجلدات الموجودة ستُدمج دون استبدال ملفات. هل تريد المتابعة؟</system:String>

@@ -28,6 +28,7 @@ public partial class ArchiveViewModel : ObservableObject
     private readonly ISettingsService _settings;
     private readonly IAuditService _audit;
     private readonly IArchiveAttachmentService _attachments;
+    private readonly WindowsDialogService _dialogs;
 
     public ArchiveViewModel(
         ICompanyService companyService,
@@ -35,7 +36,8 @@ public partial class ArchiveViewModel : ObservableObject
         ICompanyFolderService folderService,
         ISettingsService settings,
         IAuditService audit,
-        IArchiveAttachmentService attachments)
+        IArchiveAttachmentService attachments,
+        WindowsDialogService dialogs)
     {
         _companyService = companyService;
         _archiveService = archiveService;
@@ -43,6 +45,7 @@ public partial class ArchiveViewModel : ObservableObject
         _settings = settings;
         _audit = audit;
         _attachments = attachments;
+        _dialogs = dialogs;
     }
 
     [ObservableProperty] private string _archiveRoot = string.Empty;
@@ -59,6 +62,7 @@ public partial class ArchiveViewModel : ObservableObject
     public ObservableCollection<ArchiveFolderNode> TreeNodes { get; } = new();
     public ObservableCollection<ArchiveFileItem> Files { get; } = new();
     public ObservableCollection<ArchiveFileItem> SelectedFiles { get; } = new();
+    public event Action? CompanyDeleted;
     public bool CanNavigateBack => _backHistory.Count > 0 ||
         (SelectedFolder is { IsYear: false } current && Path.GetDirectoryName(current.FullPath) is { } parentPath && FindFolder(parentPath) is not null);
     public bool CanNavigateForward => _forwardHistory.Count > 0;
@@ -88,10 +92,6 @@ public partial class ArchiveViewModel : ObservableObject
             .Select(Path.GetFileName)
             .OfType<string>()
             .Where(IsYearFolder)
-            .Concat(companies.Select(company =>
-                (company.ArchiveStartYear ?? int.Parse(currentYear, System.Globalization.CultureInfo.InvariantCulture))
-                .ToString(System.Globalization.CultureInfo.InvariantCulture)))
-            .Append(currentYear)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(year => year, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -481,6 +481,12 @@ public partial class ArchiveViewModel : ObservableObject
     [RelayCommand]
     public async Task DeleteSelectedAsync()
     {
+        if (SelectedFolder is { IsRoot: true } companyFolder)
+        {
+            await DeleteArchiveCompanyAsync(companyFolder);
+            return;
+        }
+
         if (SelectedFiles.Count == 0 || SelectedCompanyId == Guid.Empty) return;
         var trash = GetTrashFolder(SelectedCompanyId, SelectedCompanyCode);
         if (SelectedFolder is not null && (string.Equals(SelectedFolder.FullPath, trash, StringComparison.OrdinalIgnoreCase) ||
@@ -873,8 +879,152 @@ public partial class ArchiveViewModel : ObservableObject
     public async Task DeleteFolderAsync(ArchiveFolderNode? folder)
     {
         if (folder is null) return;
+        if (folder.IsRoot)
+        {
+            await DeleteArchiveCompanyAsync(folder);
+            return;
+        }
         await MoveFolderToTrashAsync(folder);
         await LoadAsync();
+    }
+
+    private async Task DeleteArchiveCompanyAsync(ArchiveFolderNode folder)
+    {
+        if (!folder.IsRoot || !IsCompanyDirectory(folder.FullPath))
+        {
+            _dialogs.Warning(LocalizationService.Instance.GetString("ArchiveCompanyDeleteInvalid"));
+            return;
+        }
+
+        var company = folder.CompanyId == Guid.Empty
+            ? null
+            : await _companyService.GetCompanyAsync(folder.CompanyId);
+        var companyFolders = folder.CompanyId == Guid.Empty
+            ? new[] { folder }
+            : TreeNodes.SelectMany(year => year.Children)
+                .Where(companyNode => companyNode.CompanyId == folder.CompanyId)
+                .ToArray();
+        var foldersToCheck = companyFolders
+            .Select(companyNode => companyNode.FullPath)
+            .Append(folder.FullPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (company?.DocumentStoragePath is { Length: > 0 } storedPath &&
+            IsCompanyDirectory(storedPath))
+        {
+            foldersToCheck.Add(storedPath);
+        }
+
+        try
+        {
+            if (foldersToCheck.Any(ContainsFilesOrReparsePoints))
+            {
+                _dialogs.Warning(LocalizationService.Instance.GetString("ArchiveCompanyDeleteHasFiles"));
+                return;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _dialogs.Error(ex.Message);
+            return;
+        }
+
+        var confirmMessage = string.Format(
+            LocalizationService.Instance.CurrentCulture,
+            LocalizationService.Instance.GetString("ArchiveCompanyDeleteConfirm"),
+            company?.DisplayName ?? folder.Name);
+        if (!_dialogs.Confirm(confirmMessage))
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var companyPath in foldersToCheck.Where(IsCompanyDirectory))
+            {
+                DeleteEmptyDirectoryTree(companyPath);
+            }
+
+            if (company is not null)
+            {
+                await _companyService.DeleteCompanyAsync(company.Id);
+                CompanyDeleted?.Invoke();
+            }
+            else
+            {
+                await _audit.WriteAsync("ArchiveDeleteCompanyFolder", "ArchiveFolder", folder.Name, folder.FullPath);
+            }
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _dialogs.Error(ex.Message);
+        }
+    }
+
+    private bool IsCompanyDirectory(string path)
+    {
+        var relativePath = Path.GetRelativePath(Path.GetFullPath(ArchiveRoot), Path.GetFullPath(path));
+        var segments = relativePath.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        return !Path.IsPathRooted(relativePath) &&
+               segments.Length == 2 &&
+               IsYearFolder(segments[0]) &&
+               segments[1] is not "." and not "..";
+    }
+
+    private static bool ContainsFilesOrReparsePoints(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return false;
+        }
+
+        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+        {
+            return true;
+        }
+
+        foreach (var entry in Directory.EnumerateFileSystemEntries(path))
+        {
+            var attributes = File.GetAttributes(entry);
+            if ((attributes & FileAttributes.ReparsePoint) != 0 ||
+                (attributes & FileAttributes.Directory) == 0 ||
+                ContainsFilesOrReparsePoints(entry))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void DeleteEmptyDirectoryTree(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new IOException(LocalizationService.Instance.GetString("ArchiveCompanyDeleteHasFiles"));
+        }
+
+        foreach (var entry in Directory.EnumerateFileSystemEntries(path))
+        {
+            var attributes = File.GetAttributes(entry);
+            if ((attributes & FileAttributes.ReparsePoint) != 0 ||
+                (attributes & FileAttributes.Directory) == 0)
+            {
+                throw new IOException(LocalizationService.Instance.GetString("ArchiveCompanyDeleteHasFiles"));
+            }
+
+            DeleteEmptyDirectoryTree(entry);
+        }
+
+        Directory.Delete(path, recursive: false);
     }
 
     private async Task MoveFolderToTrashAsync(ArchiveFolderNode folder)

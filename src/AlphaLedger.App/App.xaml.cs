@@ -196,6 +196,7 @@ public partial class App : Application
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
+            ShowAppliedUpdateNotes(mainWindow, loc, e.Args);
             await CheckForUpdatesAsync(mainWindow);
         }
         catch (Exception ex)
@@ -272,9 +273,60 @@ public partial class App : Application
                 File.Delete(replacement);
         }
 
-        var restartedApplication = Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+        var restartInfo = new ProcessStartInfo(target) { UseShellExecute = true };
+        restartInfo.ArgumentList.Add("--update-applied");
+        var restartedApplication = Process.Start(restartInfo);
         if (restartedApplication is null)
             throw new InvalidOperationException("The updated application could not be restarted.");
+    }
+
+    private static void ShowAppliedUpdateNotes(
+        Window owner,
+        LocalizationService localization,
+        IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count != 1 || arguments[0] != "--update-applied")
+            return;
+
+        try
+        {
+            using var stream = typeof(App).Assembly.GetManifestResourceStream("AlphaLedger.App.UpdateNotes.json")
+                ?? throw new InvalidDataException("The update notes resource is missing.");
+            var notes = System.Text.Json.JsonSerializer.Deserialize<UpdateNotes>(stream)
+                ?? throw new InvalidDataException("The update notes resource is empty.");
+            var details = notes.Changes.Length == 0
+                ? localization.GetString("UpdateNotesNoDetails")
+                : string.Join(Environment.NewLine, notes.Changes.Select(change => $"• {change}"));
+            MessageBox.Show(
+                owner,
+                string.Format(
+                    localization.CurrentCulture,
+                    localization.GetString("UpdateNotesMessage"),
+                    notes.Version,
+                    details),
+                localization.GetString("UpdateNotesTitle"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException)
+        {
+            LogUpdateError(ex);
+            MessageBox.Show(
+                owner,
+                localization.GetString("UpdateNotesNoDetails"),
+                localization.GetString("UpdateNotesTitle"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+    }
+
+    private sealed class UpdateNotes
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        public string Version { get; init; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("changes")]
+        public string[] Changes { get; init; } = [];
     }
 
     private static void LogUpdateError(Exception exception)
