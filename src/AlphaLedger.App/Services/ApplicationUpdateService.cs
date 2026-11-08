@@ -13,12 +13,14 @@ public sealed class ApplicationUpdateService(GitHubUpdateService updater)
     public async Task<UpdateCheckOutcome> CheckForUpdatesAsync(
         Window owner,
         bool showUpToDateMessage = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool showCheckingProgress = true)
     {
         await _checkGate.WaitAsync(cancellationToken);
         try
         {
-            return await CheckForUpdatesCoreAsync(owner, showUpToDateMessage, cancellationToken);
+            return await CheckForUpdatesCoreAsync(
+                owner, showUpToDateMessage, cancellationToken, showCheckingProgress);
         }
         finally
         {
@@ -29,12 +31,17 @@ public sealed class ApplicationUpdateService(GitHubUpdateService updater)
     private async Task<UpdateCheckOutcome> CheckForUpdatesCoreAsync(
         Window owner,
         bool showUpToDateMessage,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool showCheckingProgress)
     {
         var localization = LocalizationService.Instance;
-        var progressWindow = new UpdateProgressWindow { Owner = owner };
-        progressWindow.SetChecking();
-        progressWindow.Show();
+        UpdateProgressWindow? progressWindow = null;
+        if (showCheckingProgress)
+        {
+            progressWindow = new UpdateProgressWindow { Owner = owner };
+            progressWindow.SetChecking();
+            progressWindow.Show();
+        }
 
         GitHubUpdateService.ReleaseUpdate? update;
         try
@@ -43,7 +50,7 @@ public sealed class ApplicationUpdateService(GitHubUpdateService updater)
         }
         finally
         {
-            progressWindow.Close();
+            progressWindow?.Close();
         }
 
         if (update is null)

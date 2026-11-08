@@ -14,6 +14,7 @@ public sealed class GitHubUpdateService : IDisposable
     private const string UpdateFileName = "AlphaLedger-Update.exe";
     private const string PatcherFileName = "AlphaLedger-Patcher.ps1";
     private const long MaximumInstallerSize = 250 * 1024 * 1024;
+    private static readonly TimeSpan ReleaseCheckTimeout = TimeSpan.FromSeconds(15);
     private readonly HttpClient _httpClient;
 
     public GitHubUpdateService()
@@ -26,7 +27,7 @@ public sealed class GitHubUpdateService : IDisposable
 
     public async Task<ReleaseUpdate?> CheckForUpdateAsync(CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.GetAsync(ReleaseApiUrl, cancellationToken);
+        using var response = await GetLatestReleaseResponseAsync(cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)
             return null;
 
@@ -64,6 +65,48 @@ public sealed class GitHubUpdateService : IDisposable
             RequireSha256(deltaAsset),
             GetAssetDownloadUris(patcherAsset),
             RequireSha256(patcherAsset));
+    }
+
+    private async Task<HttpResponseMessage> GetLatestReleaseResponseAsync(CancellationToken cancellationToken)
+    {
+        Exception? lastError = null;
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(ReleaseCheckTimeout);
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, ReleaseApiUrl);
+                var response = await _httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseContentRead,
+                    timeout.Token);
+                if (!IsTransientStatusCode(response.StatusCode) || attempt == 2)
+                    return response;
+
+                response.Dispose();
+                await Task.Delay(TimeSpan.FromSeconds(attempt + 1), cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (attempt < 2 && IsTransientDownloadFailure(ex))
+            {
+                lastError = ex;
+                await Task.Delay(TimeSpan.FromSeconds(attempt + 1), cancellationToken);
+            }
+            catch (OperationCanceledException ex)
+            {
+                lastError = new TimeoutException("Timed out while checking GitHub for updates.", ex);
+                if (attempt < 2)
+                    await Task.Delay(TimeSpan.FromSeconds(attempt + 1), cancellationToken);
+            }
+        }
+
+        throw new HttpRequestException(
+            $"Could not retrieve the latest GitHub release after three attempts. {lastError?.Message}",
+            lastError);
     }
 
     public async Task<DownloadedUpdate> DownloadUpdateAsync(

@@ -225,7 +225,7 @@ public partial class App : Application
         try
         {
             var updater = _host!.Services.GetRequiredService<ApplicationUpdateService>();
-            await updater.CheckForUpdatesAsync(mainWindow);
+            await updater.CheckForUpdatesAsync(mainWindow, showCheckingProgress: false);
         }
         catch (Exception ex)
         {
