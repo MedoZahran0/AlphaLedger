@@ -141,7 +141,7 @@ public sealed class CompanyService : ICompanyService
         Validate(model);
         await EnsureNoUnexpectedDuplicates(model, cancellationToken);
 
-        await RequireDocumentRoot(cancellationToken);
+        var documentRoot = await RequireDocumentRoot(cancellationToken);
         var now = _clock.UtcNow;
         var employeeId = await ResolveEmployeeAsync(model, cancellationToken);
 
@@ -176,6 +176,10 @@ public sealed class CompanyService : ICompanyService
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
+            company.DocumentStoragePath = _folders.BuildCompanyFolderPath(
+                documentRoot,
+                company.ArchiveStartYear.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                company);
 
             _db.Companies.Add(company);
             if (model.CreateCurrentFiscalYear)

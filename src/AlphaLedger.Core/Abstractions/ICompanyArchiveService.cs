@@ -3,8 +3,8 @@ namespace AlphaLedger.Core.Abstractions;
 public interface ICompanyArchiveService
 {
     /// <summary>
-    /// Creates the current calendar-year folder and each active company's configured archive
-    /// start-year folder. Existing folders and files are never deleted or cleared.
+    /// Creates the current calendar-year folder and keeps registered archive paths aligned.
+    /// Company folders are only created by explicit company-folder actions.
     /// </summary>
     Task EnsureCurrentYearStructureAsync(CancellationToken cancellationToken = default);
 

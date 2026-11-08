@@ -87,8 +87,13 @@ public class CompanyWorkflowTests
                 archiveStartYear.ToString(),
                 folderService.BuildCompanyFolderName(company.DisplayName, company.Code));
             Assert.Equal(archiveStartYear, company.ArchiveStartYear);
-            Assert.Null(company.DocumentStoragePath);
+            Assert.Equal(expectedArchivePath, company.DocumentStoragePath);
             Assert.False(Directory.Exists(expectedArchivePath));
+            var listedCompany = Assert.Single(await companyService.GetCompaniesAsync(new CompanyFilter()));
+            Assert.Equal(archiveStartYear, listedCompany.ArchiveStartYear);
+            Assert.Equal(expectedArchivePath, listedCompany.DocumentStoragePath);
+            Assert.True(listedCompany.FolderPathAssigned);
+            Assert.True(listedCompany.FolderMissing);
             Assert.Null(await db.CompanyFiscalYears
                 .Where(year => year.CompanyId == company.Id)
                 .Select(year => year.FolderPath)
@@ -100,7 +105,8 @@ public class CompanyWorkflowTests
                 ArchiveStartYear = archiveStartYear,
                 CreateCurrentFiscalYear = false
             });
-            Assert.Null(secondCompany.DocumentStoragePath);
+            Assert.NotNull(secondCompany.DocumentStoragePath);
+            Assert.Equal(Path.GetDirectoryName(expectedArchivePath), Path.GetDirectoryName(secondCompany.DocumentStoragePath));
             Assert.False(Directory.Exists(expectedArchivePath));
 
             await archiveService.EnsureCurrentYearStructureAsync();

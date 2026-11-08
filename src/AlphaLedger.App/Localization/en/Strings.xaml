@@ -87,6 +87,7 @@
     <system:String x:Key="CompaniesStatusArchived">Archived</system:String>
     <system:String x:Key="CompaniesFolderAvailable">Available</system:String>
     <system:String x:Key="CompaniesFolderMissing">Missing</system:String>
+    <system:String x:Key="CompaniesFolderNotCreated">Path assigned - folder not created yet</system:String>
     <system:String x:Key="CompaniesRecordCount">Record count: {0}</system:String>
     <system:String x:Key="CompaniesActiveCount">Active companies: {0}</system:String>
     <system:String x:Key="CompaniesSelectCompany">Please select a company from the table first.</system:String>
@@ -108,6 +109,7 @@
     <system:String x:Key="CompaniesHeaderClientSince">Client Since</system:String>
     <system:String x:Key="CompaniesHeaderStatus">Status</system:String>
     <system:String x:Key="CompaniesHeaderDocumentFolder">Document Folder</system:String>
+    <system:String x:Key="CompaniesHeaderArchiveYear">Archive Path Year</system:String>
     <system:String x:Key="CompaniesHeaderOperationsCount">Operations</system:String>
     <system:String x:Key="CompaniesHeaderAgreedFees">Agreed Fees</system:String>
     <system:String x:Key="CompaniesHeaderCollections">Collections</system:String>

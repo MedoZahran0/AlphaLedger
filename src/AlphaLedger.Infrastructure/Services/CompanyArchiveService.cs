@@ -77,6 +77,7 @@ public sealed class CompanyArchiveService : ICompanyArchiveService
             }
 
             if (string.IsNullOrWhiteSpace(company.DocumentStoragePath) ||
+                !Directory.Exists(company.DocumentStoragePath) ||
                 !IsInsideRoot(company.DocumentStoragePath, root))
             {
                 continue;

@@ -31,8 +31,8 @@
                 <Button Content="{DynamicResource CompaniesOpenOnDisk}" Style="{StaticResource SecondaryButtonStyle}"
                         Command="{Binding OpenFolderOnDiskCommand}" Margin="0,0,8,0" MinWidth="125"/>
 
-                <Button Content="{DynamicResource CompaniesLocateFolder}" Style="{StaticResource SecondaryButtonStyle}"
-                        Command="{Binding LocateFolderCommand}" Margin="0,0,8,0" MinWidth="125"/>
+                <Button Content="{DynamicResource CompaniesCreateArchiveFolders}" Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding CreateArchiveFoldersCommand}" Margin="0,0,8,0" MinWidth="170"/>
 
                 <Separator Width="1" Height="22" Background="{StaticResource BorderBrushKey}" Margin="4,0,12,0"/>
 
@@ -126,6 +126,7 @@
                 <DataGridTextColumn Header="{DynamicResource CompaniesHeaderActivity}" Binding="{Binding BusinessActivity}" Width="130"/>
                 <DataGridTextColumn Header="{DynamicResource CompaniesEmployeeFilter}" Binding="{Binding AssignedEmployeeName}" Width="120"/>
                 <DataGridTextColumn Header="{DynamicResource CompaniesHeaderClientSince}" Binding="{Binding ClientSince, StringFormat='{}{0:d}'}" Width="95"/>
+                <DataGridTextColumn Header="{DynamicResource CompaniesHeaderArchiveYear}" Binding="{Binding ArchiveStartYear}" Width="105"/>
                 
                 <!-- Status Column -->
                 <DataGridTemplateColumn Header="{DynamicResource CompaniesHeaderStatus}" Width="80">
@@ -171,7 +172,8 @@
                 <DataGridTemplateColumn Header="{DynamicResource CompaniesHeaderDocumentFolder}" Width="105">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                        ToolTip="{Binding DocumentStoragePath}">
                                 <Ellipse Width="8" Height="8" Margin="0,0,6,0">
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">
@@ -182,6 +184,13 @@
                                                 <DataTrigger Binding="{Binding FolderMissing}" Value="True">
                                                     <Setter Property="Fill" Value="{StaticResource DangerBrush}"/>
                                                 </DataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding FolderMissing}" Value="True"/>
+                                                        <Condition Binding="{Binding FolderPathAssigned}" Value="True"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Fill" Value="#D97706"/>
+                                                </MultiDataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Ellipse.Style>
@@ -194,6 +203,14 @@
                                                 <DataTrigger Binding="{Binding FolderMissing}" Value="True">
                                                     <Setter Property="Text" Value="{DynamicResource CompaniesFolderMissing}"/>
                                                 </DataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding FolderMissing}" Value="True"/>
+                                                        <Condition Binding="{Binding FolderPathAssigned}" Value="True"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Text" Value="{DynamicResource CompaniesFolderNotCreated}"/>
+                                                    <Setter Property="Foreground" Value="#B45309"/>
+                                                </MultiDataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>

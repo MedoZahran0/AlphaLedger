@@ -23,5 +23,6 @@ public class CompanyListItem
     public int? ArchiveStartYear { get; set; }
     public string? DocumentStoragePath { get; set; }
     public bool FolderMissing { get; set; }
+    public bool FolderPathAssigned => !string.IsNullOrWhiteSpace(DocumentStoragePath);
     public string FolderStatusText => FolderMissing ? "مفقود" : "متوفر";
 }

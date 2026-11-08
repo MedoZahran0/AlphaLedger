@@ -87,6 +87,7 @@
     <system:String x:Key="CompaniesStatusArchived">مؤرشف</system:String>
     <system:String x:Key="CompaniesFolderAvailable">متوفر</system:String>
     <system:String x:Key="CompaniesFolderMissing">مفقود</system:String>
+    <system:String x:Key="CompaniesFolderNotCreated">المسار مربوط - المجلد لم يُنشأ بعد</system:String>
     <system:String x:Key="CompaniesRecordCount">عدد السجلات: {0}</system:String>
     <system:String x:Key="CompaniesActiveCount">الشركات النشطة: {0}</system:String>
     <system:String x:Key="CompaniesSelectCompany">اختر شركة أولاً من الجدول.</system:String>
@@ -108,6 +109,7 @@
     <system:String x:Key="CompaniesHeaderClientSince">بدء التعامل</system:String>
     <system:String x:Key="CompaniesHeaderStatus">الحالة</system:String>
     <system:String x:Key="CompaniesHeaderDocumentFolder">مجلد المستندات</system:String>
+    <system:String x:Key="CompaniesHeaderArchiveYear">سنة مسار الأرشيف</system:String>
     <system:String x:Key="CompaniesHeaderOperationsCount">عدد العمليات</system:String>
     <system:String x:Key="CompaniesHeaderAgreedFees">إجمالي الأتعاب</system:String>
     <system:String x:Key="CompaniesHeaderCollections">إجمالي التحصيل</system:String>
