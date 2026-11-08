@@ -260,7 +260,7 @@ public partial class App : Application
             progressWindow.Close();
             LogUpdateError(ex);
             MessageBox.Show(mainWindow,
-                localization.GetString("UpdateCheckFailedMessage"),
+                $"{localization.GetString("UpdateCheckFailedMessage")}\n\n{ex.GetBaseException().Message}",
                 localization.GetString("UpdateAvailableTitle"),
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;

@@ -404,7 +404,7 @@
     <system:String x:Key="SettingsSystemInfo">⚙ معلومات قاعدة البيانات ومسارات النظام</system:String>
     <system:String x:Key="UpdateAvailableTitle">يتوفر تحديث</system:String>
     <system:String x:Key="UpdateAvailableMessage">يتوفر إصدار أحدث ({0}). هل تريد تنزيل التحديث؟</system:String>
-    <system:String x:Key="UpdateCheckFailedMessage">تعذر تنزيل التحديث أو التحقق من سلامته. لم يتم تطبيقه؛ راجع اتصال الإنترنت أو سجل أخطاء التطبيق.</system:String>
+    <system:String x:Key="UpdateCheckFailedMessage">تعذر تنزيل التحديث أو التحقق من سلامته. لم يتم تطبيقه. تفاصيل الخطأ:</system:String>
     <system:String x:Key="UpdateApplyFailedMessage">تعذر تطبيق التحديث. لم يتم استبدال النسخة الحالية؛ راجع سجل أخطاء التطبيق.</system:String>
     <system:String x:Key="UpdateReadyRestartMessage">تم تنزيل التحديث ({0}) والتحقق منه. هل تريد إعادة تشغيل البرنامج الآن لتطبيقه؟</system:String>
     <system:String x:Key="UpdateProgressTitle">تحديث Alpha Ledger</system:String>
