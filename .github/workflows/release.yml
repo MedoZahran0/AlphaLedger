@@ -47,3 +47,23 @@ jobs:
             '.\Release\AlphaLedger-Update.exe'
           )
           gh release create $env:GITHUB_REF_NAME @assets --title "AlphaLedger $env:GITHUB_REF_NAME" --generate-notes
+
+      - name: Publish update manifest after release assets are available
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content .\src\AlphaLedger.App\AlphaLedger.App.csproj
+          $version = $project.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1 -ExpandProperty Version
+          $hash = (Get-FileHash .\Release\AlphaLedger-Update.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $manifest = [ordered]@{
+            version = $version
+            sha256 = "sha256:$hash"
+          } | ConvertTo-Json
+
+          git fetch origin main
+          git checkout -B publish-update-manifest origin/main
+          Set-Content -Path .\updates\latest.json -Value $manifest -Encoding utf8NoBOM
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add updates/latest.json
+          git commit -m "Publish update manifest for v$version"
+          git push origin HEAD:main

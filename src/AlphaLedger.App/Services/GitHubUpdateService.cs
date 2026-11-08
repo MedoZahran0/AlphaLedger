@@ -10,84 +10,86 @@ namespace AlphaLedger.App.Services;
 
 public sealed class GitHubUpdateService : IDisposable
 {
-    private const string ReleaseApiUrl = "https://api.github.com/repos/MedoZahran0/AlphaLedger/releases/latest";
+    private const string LatestManifestUrl = "https://raw.githubusercontent.com/MedoZahran0/AlphaLedger/main/updates/latest.json";
     private const string UpdateFileName = "AlphaLedger-Update.exe";
     private const long MaximumInstallerSize = 250 * 1024 * 1024;
-    private static readonly TimeSpan ReleaseCheckTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan ReleaseCheckTimeout = TimeSpan.FromSeconds(6);
     private readonly HttpClient _httpClient;
 
     public GitHubUpdateService()
     {
         _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("AlphaLedger", GetCurrentVersion().ToString()));
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        _httpClient.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     }
 
     public async Task<ReleaseUpdate?> CheckForUpdateAsync(CancellationToken cancellationToken = default)
     {
-        using var response = await GetLatestReleaseResponseAsync(cancellationToken);
-        if (response.StatusCode == HttpStatusCode.NotFound)
-            return null;
-
+        using var response = await GetLatestManifestResponseAsync(cancellationToken);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(stream, cancellationToken: cancellationToken)
-            ?? throw new InvalidDataException("GitHub returned an empty release response.");
+        var manifest = await JsonSerializer.DeserializeAsync<UpdateManifest>(stream, cancellationToken: cancellationToken)
+            ?? throw new InvalidDataException("The update manifest is empty.");
 
-        if (release.Draft || release.Prerelease ||
-            !TryParseVersion(release.TagName, out var releaseVersion) ||
-            releaseVersion <= GetCurrentVersion())
+        if (!TryParseVersion(manifest.Version, out var releaseVersion))
+            throw new InvalidDataException("The update manifest contains an invalid version.");
+        if (releaseVersion <= GetCurrentVersion())
             return null;
 
-        var fullAsset = release.Assets.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, UpdateFileName, StringComparison.Ordinal))
-            ?? throw new InvalidDataException($"The latest release does not contain {UpdateFileName}.");
-        var fullUris = GetAssetDownloadUris(fullAsset);
-        var fullDigest = RequireSha256(fullAsset);
+        const string digestPrefix = "sha256:";
+        if (string.IsNullOrWhiteSpace(manifest.Digest) ||
+            !manifest.Digest.StartsWith(digestPrefix, StringComparison.OrdinalIgnoreCase) ||
+            manifest.Digest.Length != digestPrefix.Length + 64 ||
+            manifest.Digest[digestPrefix.Length..].Any(character => !Uri.IsHexDigit(character)))
+            throw new InvalidDataException("The update manifest does not contain a valid SHA-256 digest.");
 
-        return new ReleaseUpdate(release.TagName, releaseVersion, fullUris, fullDigest);
+        var tagName = $"v{releaseVersion}";
+        var downloadUri = new Uri(
+            $"https://github.com/MedoZahran0/AlphaLedger/releases/download/{tagName}/{UpdateFileName}",
+            UriKind.Absolute);
+        return new ReleaseUpdate(tagName, releaseVersion, downloadUri, manifest.Digest);
     }
 
-    private async Task<HttpResponseMessage> GetLatestReleaseResponseAsync(CancellationToken cancellationToken)
+    private async Task<HttpResponseMessage> GetLatestManifestResponseAsync(CancellationToken cancellationToken)
     {
         Exception? lastError = null;
-        for (var attempt = 0; attempt < 3; attempt++)
+        for (var attempt = 0; attempt < 2; attempt++)
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(ReleaseCheckTimeout);
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, ReleaseApiUrl);
+                using var request = new HttpRequestMessage(HttpMethod.Get, LatestManifestUrl);
+                request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
                 var response = await _httpClient.SendAsync(
                     request,
                     HttpCompletionOption.ResponseContentRead,
                     timeout.Token);
-                if (!IsTransientStatusCode(response.StatusCode) || attempt == 2)
+                if (!IsTransientStatusCode(response.StatusCode) || attempt == 1)
                     return response;
 
                 response.Dispose();
-                await Task.Delay(TimeSpan.FromSeconds(attempt + 1), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(300), cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
-            catch (Exception ex) when (attempt < 2 && IsTransientDownloadFailure(ex))
+            catch (Exception ex) when (attempt < 1 && IsTransientDownloadFailure(ex))
             {
                 lastError = ex;
-                await Task.Delay(TimeSpan.FromSeconds(attempt + 1), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(300), cancellationToken);
             }
             catch (OperationCanceledException ex)
             {
-                lastError = new TimeoutException("Timed out while checking GitHub for updates.", ex);
-                if (attempt < 2)
-                    await Task.Delay(TimeSpan.FromSeconds(attempt + 1), cancellationToken);
+                lastError = new TimeoutException("Timed out while checking the update manifest.", ex);
+                if (attempt < 1)
+                    await Task.Delay(TimeSpan.FromMilliseconds(300), cancellationToken);
             }
         }
 
         throw new HttpRequestException(
-            $"Could not retrieve the latest GitHub release after three attempts. {lastError?.Message}",
+            $"Could not retrieve the update manifest after two quick attempts. {lastError?.Message}",
             lastError);
     }
 
@@ -99,7 +101,7 @@ public sealed class GitHubUpdateService : IDisposable
         var directory = Path.Combine(Path.GetTempPath(), "AlphaLedger", "Updates");
         Directory.CreateDirectory(directory);
         var fullPath = await DownloadAndVerifyAssetAsync(
-            update.DownloadUris,
+            [update.DownloadUri],
             update.Digest,
             Path.Combine(directory, $"{UpdateFileName[..^4]}-{update.Version}.exe"),
             progress,
@@ -194,33 +196,12 @@ public sealed class GitHubUpdateService : IDisposable
             lastError);
     }
 
-    private static IReadOnlyList<Uri> GetAssetDownloadUris(GitHubReleaseAsset asset)
-    {
-        if (asset.Id <= 0 ||
-            !Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var browserUri) ||
-            browserUri.Scheme != Uri.UriSchemeHttps)
-            throw new InvalidDataException($"The release asset {asset.Name} does not have valid download information.");
-
-        var apiUri = new Uri(
-            $"https://api.github.com/repos/MedoZahran0/AlphaLedger/releases/assets/{asset.Id}",
-            UriKind.Absolute);
-        return [apiUri, browserUri];
-    }
-
     private static bool IsTransientStatusCode(HttpStatusCode statusCode)
         => statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests ||
            (int)statusCode >= 500;
 
     private static bool IsTransientDownloadFailure(Exception exception)
         => exception is HttpRequestException or IOException or TaskCanceledException;
-
-    private static string RequireSha256(GitHubReleaseAsset asset)
-    {
-        if (string.IsNullOrWhiteSpace(asset.Digest) ||
-            !asset.Digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"The release asset {asset.Name} is missing its SHA-256 digest.");
-        return asset.Digest;
-    }
 
     public static Version GetCurrentVersion() =>
         typeof(GitHubUpdateService).Assembly.GetName().Version ?? new Version(1, 0, 0);
@@ -245,38 +226,17 @@ public sealed class GitHubUpdateService : IDisposable
     public sealed record ReleaseUpdate(
         string TagName,
         Version Version,
-        IReadOnlyList<Uri> DownloadUris,
+        Uri DownloadUri,
         string Digest);
     public sealed record DownloadedUpdate(string UpdatePath);
     public sealed record DownloadProgress(long BytesReceived, long? TotalBytes);
 
-    private sealed class GitHubRelease
+    private sealed class UpdateManifest
     {
-        [JsonPropertyName("tag_name")]
-        public string TagName { get; init; } = string.Empty;
+        [JsonPropertyName("version")]
+        public string Version { get; init; } = string.Empty;
 
-        [JsonPropertyName("draft")]
-        public bool Draft { get; init; }
-
-        [JsonPropertyName("prerelease")]
-        public bool Prerelease { get; init; }
-
-        [JsonPropertyName("assets")]
-        public List<GitHubReleaseAsset> Assets { get; init; } = [];
-    }
-
-    private sealed class GitHubReleaseAsset
-    {
-        [JsonPropertyName("id")]
-        public long Id { get; init; }
-
-        [JsonPropertyName("name")]
-        public string Name { get; init; } = string.Empty;
-
-        [JsonPropertyName("browser_download_url")]
-        public string BrowserDownloadUrl { get; init; } = string.Empty;
-
-        [JsonPropertyName("digest")]
+        [JsonPropertyName("sha256")]
         public string? Digest { get; init; }
     }
 }
