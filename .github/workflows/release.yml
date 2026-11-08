@@ -37,34 +37,6 @@ jobs:
         shell: pwsh
         run: .\installer\build-installer.ps1
 
-      - name: Build differential update
-        id: delta
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $release = gh api "repos/$env:GITHUB_REPOSITORY/releases/latest" | ConvertFrom-Json
-          if (-not $release.tag_name) {
-            throw 'The previous GitHub release could not be determined.'
-          }
-          $previous = Join-Path $env:RUNNER_TEMP 'previous-release'
-          New-Item -ItemType Directory -Force -Path $previous | Out-Null
-          gh release download $release.tag_name --repo $env:GITHUB_REPOSITORY --pattern AlphaLedger-Update.exe --dir $previous
-          if ($LASTEXITCODE -ne 0) {
-            throw "Could not download the update executable from $($release.tag_name)."
-          }
-          $deltaName = "AlphaLedger-Update-from-$($release.tag_name).delta"
-          dotnet run --project .\installer\AlphaLedgerDeltaTool.csproj --configuration Release -- `
-            (Join-Path $previous 'AlphaLedger-Update.exe') `
-            .\Release\AlphaLedger-Update.exe `
-            (Join-Path (Get-Location) "Release\$deltaName")
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Differential update generation failed.'
-          }
-          if (Test-Path -LiteralPath (Join-Path (Get-Location) "Release\$deltaName")) {
-            "asset_name=$deltaName" >> $env:GITHUB_OUTPUT
-          }
-
       - name: Publish GitHub release
         shell: pwsh
         env:
@@ -72,10 +44,6 @@ jobs:
         run: |
           $assets = @(
             '.\Release\AlphaLedger-Setup.exe',
-            '.\Release\AlphaLedger-Update.exe',
-            '.\Release\AlphaLedger-Patcher.ps1'
+            '.\Release\AlphaLedger-Update.exe'
           )
-          if ('${{ steps.delta.outputs.asset_name }}') {
-            $assets += ".\Release\${{ steps.delta.outputs.asset_name }}"
-          }
           gh release create $env:GITHUB_REF_NAME @assets --title "AlphaLedger $env:GITHUB_REF_NAME" --generate-notes

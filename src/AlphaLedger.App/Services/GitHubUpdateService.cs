@@ -12,7 +12,6 @@ public sealed class GitHubUpdateService : IDisposable
 {
     private const string ReleaseApiUrl = "https://api.github.com/repos/MedoZahran0/AlphaLedger/releases/latest";
     private const string UpdateFileName = "AlphaLedger-Update.exe";
-    private const string PatcherFileName = "AlphaLedger-Patcher.ps1";
     private const long MaximumInstallerSize = 250 * 1024 * 1024;
     private static readonly TimeSpan ReleaseCheckTimeout = TimeSpan.FromSeconds(15);
     private readonly HttpClient _httpClient;
@@ -47,24 +46,7 @@ public sealed class GitHubUpdateService : IDisposable
         var fullUris = GetAssetDownloadUris(fullAsset);
         var fullDigest = RequireSha256(fullAsset);
 
-        var deltaName = $"AlphaLedger-Update-from-v{GetCurrentVersion().ToString(3)}.delta";
-        var deltaAsset = release.Assets.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, deltaName, StringComparison.Ordinal));
-        var patcherAsset = release.Assets.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, PatcherFileName, StringComparison.Ordinal));
-
-        if (deltaAsset is null || patcherAsset is null)
-            return new ReleaseUpdate(release.TagName, releaseVersion, fullUris, fullDigest, null, null, null, null);
-
-        return new ReleaseUpdate(
-            release.TagName,
-            releaseVersion,
-            fullUris,
-            fullDigest,
-            GetAssetDownloadUris(deltaAsset),
-            RequireSha256(deltaAsset),
-            GetAssetDownloadUris(patcherAsset),
-            RequireSha256(patcherAsset));
+        return new ReleaseUpdate(release.TagName, releaseVersion, fullUris, fullDigest);
     }
 
     private async Task<HttpResponseMessage> GetLatestReleaseResponseAsync(CancellationToken cancellationToken)
@@ -116,59 +98,13 @@ public sealed class GitHubUpdateService : IDisposable
     {
         var directory = Path.Combine(Path.GetTempPath(), "AlphaLedger", "Updates");
         Directory.CreateDirectory(directory);
-
-        if (update.DeltaDownloadUris is not null &&
-            update.DeltaDigest is not null &&
-            update.PatcherDownloadUris is not null &&
-            update.PatcherDigest is not null)
-        {
-            var deltaPath = Path.Combine(directory, $"AlphaLedger-Update-{update.Version}.delta");
-            try
-            {
-                var verifiedDeltaPath = await DownloadAndVerifyAssetAsync(
-                    update.DeltaDownloadUris,
-                    update.DeltaDigest,
-                    deltaPath,
-                    progress,
-                    cancellationToken);
-                var patcherPath = await DownloadAndVerifyAssetAsync(
-                    update.PatcherDownloadUris,
-                    update.PatcherDigest,
-                    Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(PatcherFileName)}-{update.Version}.ps1"),
-                    progress,
-                    cancellationToken);
-                return new DownloadedUpdate(verifiedDeltaPath, patcherPath, true);
-            }
-            catch (Exception deltaError) when (deltaError is not OperationCanceledException)
-            {
-                File.Delete(deltaPath);
-                try
-                {
-                    var fallbackFullPath = await DownloadAndVerifyAssetAsync(
-                        update.DownloadUris,
-                        update.Digest,
-                        Path.Combine(directory, $"{UpdateFileName[..^4]}-{update.Version}.exe"),
-                        progress,
-                        cancellationToken);
-                    return new DownloadedUpdate(fallbackFullPath, null, false);
-                }
-                catch (Exception fullUpdateError) when (fullUpdateError is not OperationCanceledException)
-                {
-                    throw new AggregateException(
-                        "The differential update failed, and the full update fallback could not be downloaded.",
-                        deltaError,
-                        fullUpdateError);
-                }
-            }
-        }
-
         var fullPath = await DownloadAndVerifyAssetAsync(
             update.DownloadUris,
             update.Digest,
             Path.Combine(directory, $"{UpdateFileName[..^4]}-{update.Version}.exe"),
             progress,
             cancellationToken);
-        return new DownloadedUpdate(fullPath, null, false);
+        return new DownloadedUpdate(fullPath);
     }
 
     private async Task<string> DownloadAndVerifyAssetAsync(
@@ -310,12 +246,8 @@ public sealed class GitHubUpdateService : IDisposable
         string TagName,
         Version Version,
         IReadOnlyList<Uri> DownloadUris,
-        string Digest,
-        IReadOnlyList<Uri>? DeltaDownloadUris,
-        string? DeltaDigest,
-        IReadOnlyList<Uri>? PatcherDownloadUris,
-        string? PatcherDigest);
-    public sealed record DownloadedUpdate(string UpdatePath, string? PatcherPath, bool IsDelta);
+        string Digest);
+    public sealed record DownloadedUpdate(string UpdatePath);
     public sealed record DownloadProgress(long BytesReceived, long? TotalBytes);
 
     private sealed class GitHubRelease

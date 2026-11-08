@@ -55,7 +55,6 @@ try {
 
     New-Item -ItemType Directory -Force -Path $output | Out-Null
     Copy-Item -LiteralPath $app -Destination (Join-Path $output 'AlphaLedger-Update.exe') -Force
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'AlphaLedger-Patcher.ps1') -Destination (Join-Path $output 'AlphaLedger-Patcher.ps1') -Force
     & $compiler "/DAppSource=$app" "/DAppVersion=$appVersion" "/O$output" '/FAlphaLedger-Setup' (Join-Path $PSScriptRoot 'AlphaLedger.iss')
     if ($LASTEXITCODE -ne 0) {
         throw 'Inno Setup could not create AlphaLedger-Setup.exe.'

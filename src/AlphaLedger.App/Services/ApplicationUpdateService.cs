@@ -108,9 +108,7 @@ public sealed class ApplicationUpdateService(GitHubUpdateService updater)
 
         var currentExecutable = Environment.ProcessPath
             ?? throw new InvalidOperationException("The current application executable path could not be determined.");
-        var restartInfo = downloadedUpdate.IsDelta
-            ? CreateDeltaUpdaterStartInfo(downloadedUpdate, update, currentExecutable)
-            : CreateFullUpdaterStartInfo(downloadedUpdate.UpdatePath, update.Digest, currentExecutable);
+        var restartInfo = CreateFullUpdaterStartInfo(downloadedUpdate.UpdatePath, update.Digest, currentExecutable);
         var updaterProcess = Process.Start(restartInfo);
         if (updaterProcess is null)
         {
@@ -139,39 +137,6 @@ public sealed class ApplicationUpdateService(GitHubUpdateService updater)
         return startInfo;
     }
 
-    private static ProcessStartInfo CreateDeltaUpdaterStartInfo(
-        GitHubUpdateService.DownloadedUpdate downloadedUpdate,
-        GitHubUpdateService.ReleaseUpdate update,
-        string currentExecutable)
-    {
-        var patcherPath = downloadedUpdate.PatcherPath
-            ?? throw new InvalidOperationException("The verified update patcher is missing.");
-        var startInfo = new ProcessStartInfo("powershell.exe")
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("-NoProfile");
-        startInfo.ArgumentList.Add("-NonInteractive");
-        startInfo.ArgumentList.Add("-ExecutionPolicy");
-        startInfo.ArgumentList.Add("Bypass");
-        startInfo.ArgumentList.Add("-WindowStyle");
-        startInfo.ArgumentList.Add("Hidden");
-        startInfo.ArgumentList.Add("-File");
-        startInfo.ArgumentList.Add(patcherPath);
-        startInfo.ArgumentList.Add("-ProcessId");
-        startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
-        startInfo.ArgumentList.Add("-TargetPath");
-        startInfo.ArgumentList.Add(currentExecutable);
-        startInfo.ArgumentList.Add("-DeltaPath");
-        startInfo.ArgumentList.Add(downloadedUpdate.UpdatePath);
-        startInfo.ArgumentList.Add("-DeltaDigest");
-        startInfo.ArgumentList.Add(update.DeltaDigest
-            ?? throw new InvalidOperationException("The update delta digest is missing."));
-        startInfo.ArgumentList.Add("-TargetDigest");
-        startInfo.ArgumentList.Add(update.Digest);
-        return startInfo;
-    }
 }
 
 public enum UpdateCheckOutcome
