@@ -1,7 +1,6 @@
 using System.IO;
 using System.Data;
 using System.Diagnostics;
-using System.Globalization;
 using System.Windows;
 using AlphaLedger.App.Localization;
 using AlphaLedger.App.Services;
@@ -110,6 +109,7 @@ public partial class App : Application
                     services.AddSingleton<WindowsDialogService>();
                     services.AddSingleton<WindowsFolderPicker>();
                     services.AddSingleton<GitHubUpdateService>();
+                    services.AddSingleton<ApplicationUpdateService>();
                     services.AddTransient<AppDataRelocationService>();
 
                     // ViewModels
@@ -196,7 +196,7 @@ public partial class App : Application
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
-            await CheckForUpdatesAsync(mainWindow, loc);
+            await CheckForUpdatesAsync(mainWindow);
         }
         catch (Exception ex)
         {
@@ -220,133 +220,17 @@ public partial class App : Application
         }
     }
 
-    private async Task CheckForUpdatesAsync(MainWindow mainWindow, LocalizationService localization)
+    private async Task CheckForUpdatesAsync(MainWindow mainWindow)
     {
-        var updater = _host!.Services.GetRequiredService<GitHubUpdateService>();
-        GitHubUpdateService.ReleaseUpdate? update;
         try
         {
-            update = await updater.CheckForUpdateAsync();
-            if (update is null || !mainWindow.IsVisible)
-                return;
+            var updater = _host!.Services.GetRequiredService<ApplicationUpdateService>();
+            await updater.CheckForUpdatesAsync(mainWindow);
         }
         catch (Exception ex)
         {
             LogUpdateError(ex);
-            return;
         }
-
-        var message = string.Format(localization.CurrentCulture,
-            localization.GetString("UpdateAvailableMessage"), update.TagName);
-        var answer = MessageBox.Show(mainWindow, message,
-            localization.GetString("UpdateAvailableTitle"),
-            MessageBoxButton.YesNo, MessageBoxImage.Information);
-        if (answer != MessageBoxResult.Yes)
-            return;
-
-        GitHubUpdateService.DownloadedUpdate downloadedUpdate;
-        var progressWindow = new UpdateProgressWindow
-        {
-            Owner = mainWindow
-        };
-        progressWindow.Show();
-        try
-        {
-            var progress = new Progress<GitHubUpdateService.DownloadProgress>(progressWindow.ReportProgress);
-            downloadedUpdate = await updater.DownloadUpdateAsync(update, progress);
-        }
-        catch (Exception ex)
-        {
-            progressWindow.Close();
-            LogUpdateError(ex);
-            MessageBox.Show(mainWindow,
-                $"{localization.GetString("UpdateCheckFailedMessage")}\n\n{ex.GetBaseException().Message}",
-                localization.GetString("UpdateAvailableTitle"),
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        progressWindow.Close();
-        var restartAnswer = MessageBox.Show(mainWindow,
-            string.Format(localization.CurrentCulture,
-                localization.GetString("UpdateReadyRestartMessage"), update.TagName),
-            localization.GetString("UpdateAvailableTitle"),
-            MessageBoxButton.YesNo, MessageBoxImage.Information);
-        if (restartAnswer != MessageBoxResult.Yes)
-            return;
-
-        try
-        {
-            var currentExecutable = Environment.ProcessPath
-                ?? throw new InvalidOperationException("The current application executable path could not be determined.");
-            var restartInfo = downloadedUpdate.IsDelta
-                ? CreateDeltaUpdaterStartInfo(downloadedUpdate, update, currentExecutable)
-                : CreateFullUpdaterStartInfo(downloadedUpdate.UpdatePath, update.Digest, currentExecutable);
-            var updaterProcess = Process.Start(restartInfo);
-            if (updaterProcess is null)
-                throw new InvalidOperationException("The update helper process could not be started.");
-            Shutdown();
-        }
-        catch (Exception ex)
-        {
-            LogUpdateError(ex);
-            MessageBox.Show(mainWindow,
-                localization.GetString("UpdateApplyFailedMessage"),
-                localization.GetString("UpdateAvailableTitle"),
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private static ProcessStartInfo CreateFullUpdaterStartInfo(
-        string updatePath,
-        string expectedDigest,
-        string currentExecutable)
-    {
-        var startInfo = new ProcessStartInfo(updatePath)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("--apply-update");
-        startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
-        startInfo.ArgumentList.Add(currentExecutable);
-        startInfo.ArgumentList.Add(updatePath);
-        startInfo.ArgumentList.Add(expectedDigest);
-        return startInfo;
-    }
-
-    private static ProcessStartInfo CreateDeltaUpdaterStartInfo(
-        GitHubUpdateService.DownloadedUpdate downloadedUpdate,
-        GitHubUpdateService.ReleaseUpdate update,
-        string currentExecutable)
-    {
-        var patcherPath = downloadedUpdate.PatcherPath
-            ?? throw new InvalidOperationException("The verified update patcher is missing.");
-        var startInfo = new ProcessStartInfo("powershell.exe")
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("-NoProfile");
-        startInfo.ArgumentList.Add("-NonInteractive");
-        startInfo.ArgumentList.Add("-ExecutionPolicy");
-        startInfo.ArgumentList.Add("Bypass");
-        startInfo.ArgumentList.Add("-WindowStyle");
-        startInfo.ArgumentList.Add("Hidden");
-        startInfo.ArgumentList.Add("-File");
-        startInfo.ArgumentList.Add(patcherPath);
-        startInfo.ArgumentList.Add("-ProcessId");
-        startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
-        startInfo.ArgumentList.Add("-TargetPath");
-        startInfo.ArgumentList.Add(currentExecutable);
-        startInfo.ArgumentList.Add("-DeltaPath");
-        startInfo.ArgumentList.Add(downloadedUpdate.UpdatePath);
-        startInfo.ArgumentList.Add("-DeltaDigest");
-        startInfo.ArgumentList.Add(update.DeltaDigest
-            ?? throw new InvalidOperationException("The update delta digest is missing."));
-        startInfo.ArgumentList.Add("-TargetDigest");
-        startInfo.ArgumentList.Add(update.Digest);
-        return startInfo;
     }
 
     private static async Task ApplyUpdateAsync(int processId, string targetPath, string updatePath, string expectedDigest)

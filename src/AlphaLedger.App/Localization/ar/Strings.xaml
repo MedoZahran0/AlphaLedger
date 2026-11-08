@@ -409,8 +409,17 @@
     <system:String x:Key="UpdateReadyRestartMessage">تم تنزيل التحديث ({0}) والتحقق منه. هل تريد إعادة تشغيل البرنامج الآن لتطبيقه؟</system:String>
     <system:String x:Key="UpdateProgressTitle">تحديث Alpha Ledger</system:String>
     <system:String x:Key="UpdateProgressMessage">جارٍ تنزيل التحديث...</system:String>
+    <system:String x:Key="UpdateProgressChecking">جارٍ التحقق من وجود تحديثات...</system:String>
     <system:String x:Key="UpdateProgressPreparing">جارٍ الاتصال بخادم التحديث...</system:String>
     <system:String x:Key="UpdateProgressDownloaded">تم تنزيل {0} من {1}</system:String>
+    <system:String x:Key="SettingsUpdatesTitle">تحديث البرنامج</system:String>
+    <system:String x:Key="SettingsUpdatesDescription">تحقق يدويًا من وجود إصدار أحدث، واعرض تقدم الاتصال والتنزيل قبل تطبيقه.</system:String>
+    <system:String x:Key="SettingsCheckForUpdates">التحقق من وجود تحديثات</system:String>
+    <system:String x:Key="SettingsUpdateChecking">جارٍ التحقق من التحديثات...</system:String>
+    <system:String x:Key="SettingsUpdateNoUpdates">البرنامج محدّث، لا توجد تحديثات جديدة.</system:String>
+    <system:String x:Key="SettingsUpdateAvailable">تم العثور على تحديث.</system:String>
+    <system:String x:Key="SettingsUpdateDownloaded">تم تنزيل التحديث والتحقق منه.</system:String>
+    <system:String x:Key="SettingsUpdateFailed">تعذر التحقق من التحديثات.</system:String>
     <system:String x:Key="SettingsDatabasePath">مسار قاعدة بيانات SQLite:</system:String>
     <system:String x:Key="SettingsAppDataPath">مجلد بيانات التطبيق AppData:</system:String>
     <system:String x:Key="SettingsSystemStatus">حالة النظام:</system:String>

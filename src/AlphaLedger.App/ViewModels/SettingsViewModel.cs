@@ -18,6 +18,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly WindowsDialogService _dialogs;
     private readonly IAppPaths _paths;
     private readonly AppDataRelocationService _relocation;
+    private readonly ApplicationUpdateService _applicationUpdater;
 
     public SettingsViewModel(
         ISettingsService settings,
@@ -25,7 +26,8 @@ public partial class SettingsViewModel : ObservableObject
         WindowsFolderPicker picker,
         WindowsDialogService dialogs,
         IAppPaths paths,
-        AppDataRelocationService relocation)
+        AppDataRelocationService relocation,
+        ApplicationUpdateService applicationUpdater)
     {
         _settings = settings;
         _folders = folders;
@@ -33,6 +35,7 @@ public partial class SettingsViewModel : ObservableObject
         _dialogs = dialogs;
         _paths = paths;
         _relocation = relocation;
+        _applicationUpdater = applicationUpdater;
         DatabasePath = _paths.DatabasePath;
         AppDataPath = _paths.DataDirectory;
         LocalizationService.Instance.CultureChanged += OnCultureChanged;
@@ -47,8 +50,41 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _currentUserName = string.Empty;
     [ObservableProperty] private string _currentUserRole = string.Empty;
     [ObservableProperty] private string? _status;
+    [ObservableProperty] private string _updateStatus = string.Empty;
+    [ObservableProperty] private bool _isCheckingForUpdates;
 
     public event Action? IdentityChanged;
+
+    private bool CanCheckForUpdates => !IsCheckingForUpdates;
+
+    [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
+    public async Task CheckForUpdatesAsync()
+    {
+        IsCheckingForUpdates = true;
+        UpdateStatus = LocalizationService.Instance.GetString("SettingsUpdateChecking");
+        try
+        {
+            var outcome = await _applicationUpdater.CheckForUpdatesAsync(
+                Application.Current.MainWindow,
+                showUpToDateMessage: true);
+            UpdateStatus = outcome switch
+            {
+                UpdateCheckOutcome.UpToDate => LocalizationService.Instance.GetString("SettingsUpdateNoUpdates"),
+                UpdateCheckOutcome.UpdateDeclined => LocalizationService.Instance.GetString("SettingsUpdateAvailable"),
+                UpdateCheckOutcome.UpdateDownloaded => LocalizationService.Instance.GetString("SettingsUpdateDownloaded"),
+                _ => string.Empty
+            };
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus = LocalizationService.Instance.GetString("SettingsUpdateFailed");
+            _dialogs.Error($"{LocalizationService.Instance.GetString("UpdateCheckFailedMessage")}\n\n{ex.GetBaseException().Message}");
+        }
+        finally
+        {
+            IsCheckingForUpdates = false;
+        }
+    }
 
     [RelayCommand]
     public async Task LoadAsync()
@@ -118,6 +154,9 @@ public partial class SettingsViewModel : ObservableObject
         AppDataPath = Path.Combine(value, "System", "Data");
         DatabasePath = Path.Combine(AppDataPath, "alpha-ledger.db");
     }
+
+    partial void OnIsCheckingForUpdatesChanged(bool value)
+        => CheckForUpdatesCommand.NotifyCanExecuteChanged();
 
     private void OnCultureChanged()
     {

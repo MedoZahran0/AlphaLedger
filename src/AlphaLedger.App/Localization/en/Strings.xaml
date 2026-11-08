@@ -408,8 +408,17 @@
     <system:String x:Key="UpdateReadyRestartMessage">The update ({0}) is downloaded and verified. Would you like to restart the app now to apply it?</system:String>
     <system:String x:Key="UpdateProgressTitle">Updating Alpha Ledger</system:String>
     <system:String x:Key="UpdateProgressMessage">Downloading update...</system:String>
+    <system:String x:Key="UpdateProgressChecking">Checking for updates...</system:String>
     <system:String x:Key="UpdateProgressPreparing">Connecting to the update server...</system:String>
     <system:String x:Key="UpdateProgressDownloaded">Downloaded {0} of {1}</system:String>
+    <system:String x:Key="SettingsUpdatesTitle">Application updates</system:String>
+    <system:String x:Key="SettingsUpdatesDescription">Manually check for a newer version and view connection and download progress before applying it.</system:String>
+    <system:String x:Key="SettingsCheckForUpdates">Check for updates</system:String>
+    <system:String x:Key="SettingsUpdateChecking">Checking for updates...</system:String>
+    <system:String x:Key="SettingsUpdateNoUpdates">The application is up to date. No updates are available.</system:String>
+    <system:String x:Key="SettingsUpdateAvailable">An update was found.</system:String>
+    <system:String x:Key="SettingsUpdateDownloaded">The update was downloaded and verified.</system:String>
+    <system:String x:Key="SettingsUpdateFailed">Could not check for updates.</system:String>
     <system:String x:Key="SettingsDatabasePath">SQLite Database Path:</system:String>
     <system:String x:Key="SettingsAppDataPath">Application Data Folder (AppData):</system:String>
     <system:String x:Key="SettingsSystemStatus">System Status:</system:String>

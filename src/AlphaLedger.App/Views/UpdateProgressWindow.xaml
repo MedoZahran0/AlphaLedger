@@ -10,7 +10,7 @@
         loc:LocalizationExtensions.BindFlowDirection="True">
     <Grid Background="#F4F6F8" Margin="20">
         <StackPanel VerticalAlignment="Center">
-            <TextBlock Text="{DynamicResource UpdateProgressMessage}" FontSize="15"
+            <TextBlock x:Name="StageMessage" Text="{DynamicResource UpdateProgressMessage}" FontSize="15"
                        FontWeight="SemiBold" Foreground="{StaticResource NavyBrush}"/>
             <TextBlock x:Name="ProgressDetails" Text="{DynamicResource UpdateProgressPreparing}"
                        Margin="0,8,0,14" FontSize="12" Foreground="{StaticResource MutedBrush}"/>

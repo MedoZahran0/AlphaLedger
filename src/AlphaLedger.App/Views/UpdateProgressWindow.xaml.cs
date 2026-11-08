@@ -12,6 +12,20 @@ public partial class UpdateProgressWindow : Window
         InitializeComponent();
     }
 
+    public void SetChecking()
+    {
+        StageMessage.Text = LocalizationService.Instance.GetString("UpdateProgressChecking");
+        ProgressDetails.Text = LocalizationService.Instance.GetString("UpdateProgressPreparing");
+        DownloadProgressBar.IsIndeterminate = true;
+    }
+
+    public void SetDownloading()
+    {
+        StageMessage.Text = LocalizationService.Instance.GetString("UpdateProgressMessage");
+        ProgressDetails.Text = LocalizationService.Instance.GetString("UpdateProgressPreparing");
+        DownloadProgressBar.IsIndeterminate = true;
+    }
+
     public void ReportProgress(GitHubUpdateService.DownloadProgress progress)
     {
         if (progress.TotalBytes is not > 0)

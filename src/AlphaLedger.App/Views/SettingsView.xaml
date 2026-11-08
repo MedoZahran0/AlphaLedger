@@ -140,6 +140,26 @@
                         </Grid>
                     </StackPanel>
                 </Border>
+
+                <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="20" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource SettingsUpdatesTitle}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource NavyBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource SettingsUpdatesDescription}" FontSize="12" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right"
+                                    Content="{DynamicResource SettingsCheckForUpdates}"
+                                    Command="{Binding CheckForUpdatesCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    MinWidth="170"
+                                    Margin="12,0,0,0"/>
+                            <TextBlock Text="{Binding UpdateStatus}"
+                                       FontSize="12.5"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
     </Grid>
