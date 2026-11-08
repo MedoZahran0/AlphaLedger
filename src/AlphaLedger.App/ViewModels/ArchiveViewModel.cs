@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows;
 using AlphaLedger.App.Localization;
 using AlphaLedger.App.Services;
 using AlphaLedger.App.Views;
@@ -948,6 +949,97 @@ public partial class ArchiveViewModel : ObservableObject
 
     [RelayCommand]
     public async Task RefreshAsync() => await LoadAsync();
+
+    [RelayCommand]
+    public async Task CopyCompaniesToYearAsync()
+    {
+        if (SelectedYearNode is not { IsYear: true } sourceYear)
+        {
+            return;
+        }
+
+        var localization = LocalizationService.Instance;
+        var dialog = new OpenFolderDialog
+        {
+            Title = localization.GetString("ArchiveCopyYearDialogTitle"),
+            InitialDirectory = ArchiveRoot
+        };
+        if (dialog.ShowDialog(System.Windows.Application.Current.MainWindow) != true)
+        {
+            return;
+        }
+
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(ArchiveRoot));
+        var destination = Path.TrimEndingDirectorySeparator(Path.GetFullPath(dialog.FolderName));
+        var destinationYear = Path.GetFileName(destination);
+        if (!string.Equals(Path.GetDirectoryName(destination), root, StringComparison.OrdinalIgnoreCase) ||
+            !IsYearFolder(destinationYear))
+        {
+            StatusMessage = localization.GetString("ArchiveCopyYearInvalidTarget");
+            return;
+        }
+
+        if (string.Equals(sourceYear.Name, destinationYear, StringComparison.OrdinalIgnoreCase))
+        {
+            StatusMessage = localization.GetString("ArchiveCopyYearSameTarget");
+            return;
+        }
+
+        var sourceCompanyCount = Directory.EnumerateDirectories(sourceYear.FullPath).Count();
+        if (sourceCompanyCount == 0)
+        {
+            StatusMessage = localization.GetString("ArchiveCopyYearNoCompanies");
+            return;
+        }
+
+        var confirmation = string.Format(
+            localization.CurrentCulture,
+            localization.GetString("ArchiveCopyYearConfirm"),
+            sourceYear.Name,
+            destinationYear,
+            sourceCompanyCount);
+        if (MessageBox.Show(
+                System.Windows.Application.Current.MainWindow,
+                confirmation,
+                localization.GetString("ArchiveCopyCompaniesToYear"),
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question) != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            var copiedCompanyCount = await _archiveService.CopyCompanyFolderStructureToYearAsync(
+                sourceYear.Name,
+                destinationYear);
+            await _audit.WriteAsync(
+                "ArchiveCopyCompanyFoldersToYear",
+                "ArchiveYear",
+                destinationYear,
+                $"{sourceYear.Name} -> {destinationYear}; companies={copiedCompanyCount}; folders only");
+
+            await LoadAsync();
+            SelectedYearNode = TreeNodes.FirstOrDefault(node =>
+                string.Equals(node.Name, destinationYear, StringComparison.OrdinalIgnoreCase));
+            StatusMessage = string.Format(
+                localization.CurrentCulture,
+                localization.GetString("ArchiveCopyYearCompleted"),
+                copiedCompanyCount,
+                sourceYear.Name,
+                destinationYear);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex.Message;
+            MessageBox.Show(
+                System.Windows.Application.Current.MainWindow,
+                ex.Message,
+                localization.GetString("ArchiveCopyYearErrorTitle"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
 
     [RelayCommand]
     public async Task CreateMainFolderAsync()

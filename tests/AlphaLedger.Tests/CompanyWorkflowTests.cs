@@ -142,6 +142,54 @@ public class CompanyWorkflowTests
     }
 
     [Fact]
+    public async Task Archive_Year_Copy_Copies_Only_Folder_Structure_And_Merges_Existing_Folders()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"al-archive-copy-{Guid.NewGuid():N}");
+        var docsRoot = Path.Combine(tempDir, "Archive");
+        var sourceCompany = Path.Combine(docsRoot, "2026", "Company_A");
+        var targetCompany = Path.Combine(docsRoot, "2027", "Company_A");
+        Directory.CreateDirectory(Path.Combine(sourceCompany, "01 - General", "Empty"));
+        Directory.CreateDirectory(Path.Combine(sourceCompany, "02 - Tax"));
+        Directory.CreateDirectory(Path.Combine(targetCompany, "01 - General"));
+        Directory.CreateDirectory(Path.Combine(targetCompany, "03 - Existing"));
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(sourceCompany, "tax-return.pdf"), "source document");
+        File.WriteAllText(Path.Combine(sourceCompany, "02 - Tax", "declaration.pdf"), "nested source document");
+        File.WriteAllText(Path.Combine(targetCompany, "01 - General", "keep.txt"), "existing nested file");
+        File.WriteAllText(Path.Combine(targetCompany, "keep.txt"), "existing destination file");
+
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddAlphaLedgerInfrastructure(new TestAppPaths(tempDir));
+            using var serviceProvider = services.BuildServiceProvider();
+            using var scope = serviceProvider.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AlphaLedgerDbContext>();
+            await db.Database.EnsureCreatedAsync();
+            var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
+            await settings.SetDocumentRootAsync(docsRoot);
+            var archiveService = scope.ServiceProvider.GetRequiredService<ICompanyArchiveService>();
+
+            var copied = await archiveService.CopyCompanyFolderStructureToYearAsync("2026", "2027");
+
+            Assert.Equal(1, copied);
+            Assert.True(Directory.Exists(Path.Combine(targetCompany, "01 - General", "Empty")));
+            Assert.True(Directory.Exists(Path.Combine(targetCompany, "02 - Tax")));
+            Assert.True(Directory.Exists(Path.Combine(targetCompany, "03 - Existing")));
+            Assert.False(File.Exists(Path.Combine(targetCompany, "tax-return.pdf")));
+            Assert.False(File.Exists(Path.Combine(targetCompany, "02 - Tax", "declaration.pdf")));
+            Assert.Equal("existing nested file", await File.ReadAllTextAsync(Path.Combine(targetCompany, "01 - General", "keep.txt")));
+            Assert.Equal("existing destination file", await File.ReadAllTextAsync(Path.Combine(targetCompany, "keep.txt")));
+            Assert.True(File.Exists(Path.Combine(sourceCompany, "tax-return.pdf")));
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Complete_Company_Lifecycle_And_Excel_Export_Work_Correctly()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"al-work-{Guid.NewGuid():N}");

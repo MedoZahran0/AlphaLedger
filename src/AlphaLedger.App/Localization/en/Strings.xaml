@@ -421,6 +421,14 @@
 
     <!-- ARCHIVE -->
     <system:String x:Key="ArchiveSelectYear">Select archive year</system:String>
+    <system:String x:Key="ArchiveCopyCompaniesToYear">Copy companies to a new year</system:String>
+    <system:String x:Key="ArchiveCopyYearDialogTitle">Choose the new year folder inside the archive</system:String>
+    <system:String x:Key="ArchiveCopyYearConfirm">Only the folder structure for {2} companies will be copied from {0} to {1}; files and documents will not be copied. Existing folders will be merged without replacing files. Continue?</system:String>
+    <system:String x:Key="ArchiveCopyYearCompleted">Copied the folder structure for {0} companies from {1} to {2}, without copying files.</system:String>
+    <system:String x:Key="ArchiveCopyYearInvalidTarget">Choose or create a four-digit year folder inside the archive folder.</system:String>
+    <system:String x:Key="ArchiveCopyYearSameTarget">Choose a year different from the selected year.</system:String>
+    <system:String x:Key="ArchiveCopyYearNoCompanies">There are no companies in the selected year to copy.</system:String>
+    <system:String x:Key="ArchiveCopyYearErrorTitle">Could not copy company folders</system:String>
     <system:String x:Key="ArchiveAdd">Add</system:String>
     <system:String x:Key="ArchiveAddFiles">Add files</system:String>
     <system:String x:Key="ArchiveNewFolder">New folder</system:String>

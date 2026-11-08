@@ -179,6 +179,40 @@ public sealed class CompanyArchiveService : ICompanyArchiveService
         await GetCompanyArchiveRootAsync(companyId, companyCode, cancellationToken: cancellationToken);
     }
 
+    public async Task<int> CopyCompanyFolderStructureToYearAsync(
+        string sourceYearLabel,
+        string destinationYearLabel,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsYearLabel(sourceYearLabel) || !IsYearLabel(destinationYearLabel))
+        {
+            throw new ArgumentException("Archive year folders must use a four-digit year between 1900 and 2999.");
+        }
+        if (string.Equals(sourceYearLabel, destinationYearLabel, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("The source and destination archive years must be different.");
+        }
+
+        var root = Path.GetFullPath(await GetDocumentRootAsync(cancellationToken));
+        var sourceYear = Path.Combine(root, sourceYearLabel);
+        var destinationYear = Path.Combine(root, destinationYearLabel);
+        if (!Directory.Exists(sourceYear))
+        {
+            throw new DirectoryNotFoundException($"The source archive year '{sourceYearLabel}' does not exist.");
+        }
+
+        var companyFolders = Directory.EnumerateDirectories(sourceYear).ToArray();
+        Directory.CreateDirectory(destinationYear);
+        foreach (var companyFolder in companyFolders)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var destinationCompany = Path.Combine(destinationYear, Path.GetFileName(companyFolder));
+            CopyDirectoryStructure(companyFolder, destinationCompany, cancellationToken);
+        }
+
+        return companyFolders.Length;
+    }
+
     public async Task<string> GetCategoryFolderAsync(
         Guid companyId,
         string companyCode,
@@ -300,6 +334,27 @@ public sealed class CompanyArchiveService : ICompanyArchiveService
             ? value
             : null;
     }
+
+    private static void CopyDirectoryStructure(string source, string destination, CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (var directory in Directory.EnumerateDirectories(source))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
+            {
+                continue;
+            }
+
+            CopyDirectoryStructure(directory, Path.Combine(destination, Path.GetFileName(directory)), cancellationToken);
+        }
+    }
+
+    private static bool IsYearLabel(string? yearLabel)
+        => yearLabel is { Length: 4 } &&
+           int.TryParse(yearLabel, System.Globalization.NumberStyles.None,
+               System.Globalization.CultureInfo.InvariantCulture, out var year) &&
+           year is >= 1900 and <= 2999;
 
     private static bool IsInsideRoot(string path, string root)
     {

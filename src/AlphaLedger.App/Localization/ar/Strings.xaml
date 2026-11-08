@@ -422,6 +422,14 @@
 
     <!-- ARCHIVE -->
     <system:String x:Key="ArchiveSelectYear">اختر سنة الأرشيف</system:String>
+    <system:String x:Key="ArchiveCopyCompaniesToYear">نسخ الشركات لسنة جديدة</system:String>
+    <system:String x:Key="ArchiveCopyYearDialogTitle">اختر مجلد السنة الجديدة داخل الأرشيف</system:String>
+    <system:String x:Key="ArchiveCopyYearConfirm">سيتم نسخ هيكل مجلدات {2} شركة من سنة {0} إلى سنة {1} فقط، دون نسخ الملفات أو المستندات. المجلدات الموجودة ستُدمج دون استبدال ملفات. هل تريد المتابعة؟</system:String>
+    <system:String x:Key="ArchiveCopyYearCompleted">تم نسخ هيكل {0} شركة من سنة {1} إلى سنة {2} دون نسخ الملفات.</system:String>
+    <system:String x:Key="ArchiveCopyYearInvalidTarget">اختر أو أنشئ مجلد سنة مكوّنًا من 4 أرقام داخل مجلد الأرشيف.</system:String>
+    <system:String x:Key="ArchiveCopyYearSameTarget">اختر سنة مختلفة عن السنة المحددة.</system:String>
+    <system:String x:Key="ArchiveCopyYearNoCompanies">لا توجد شركات في السنة المحددة لنسخها.</system:String>
+    <system:String x:Key="ArchiveCopyYearErrorTitle">تعذر نسخ مجلدات الشركات</system:String>
     <system:String x:Key="ArchiveAdd">إضافة</system:String>
     <system:String x:Key="ArchiveAddFiles">إضافة ملفات</system:String>
     <system:String x:Key="ArchiveNewFolder">مجلد</system:String>
