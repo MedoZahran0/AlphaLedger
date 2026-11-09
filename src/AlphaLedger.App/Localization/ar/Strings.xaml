@@ -311,6 +311,9 @@
     <system:String x:Key="OperationsOverdueCount">متأخر</system:String>
     <system:String x:Key="OperationsUpcomingCount">مستحق خلال 7 أيام</system:String>
     <system:String x:Key="OperationsEmployeeFilter">الموظف المكلف</system:String>
+    <system:String x:Key="OperationsDueDateFrom">من تاريخ الاستحقاق</system:String>
+    <system:String x:Key="OperationsDueDateTo">إلى تاريخ الاستحقاق</system:String>
+    <system:String x:Key="OperationsInvalidDateRange">تاريخ البداية يجب أن يسبق تاريخ النهاية أو يساويه.</system:String>
 
     <!-- TAX RETURNS -->
     <system:String x:Key="TaxReturnsTitle">إدارة الإقرارات الضريبية</system:String>
@@ -320,6 +323,12 @@
     <system:String x:Key="TaxReturnsSearch">بحث:</system:String>
     <system:String x:Key="TaxReturnsFilterType">نوع الضريبة:</system:String>
     <system:String x:Key="TaxReturnsFilterStatus">حالة التقديم:</system:String>
+    <system:String x:Key="TaxReturnsAll">كل الإقرارات</system:String>
+    <system:String x:Key="TaxReturnsFilterEmployee">الموظف المسؤول</system:String>
+    <system:String x:Key="TaxReturnsCreateOperation">إنشاء عملية مرتبطة</system:String>
+    <system:String x:Key="TaxReturnsOperationAlreadyLinked">هذا الإقرار مرتبط بعملية بالفعل.</system:String>
+    <system:String x:Key="TaxReturnsOperationCreated">تم إنشاء عملية وربطها بالإقرار.</system:String>
+    <system:String x:Key="TaxReturnsOperationLinkFailed">تعذر ربط العملية بالإقرار. الخطأ: {0}. وتعذر تنظيف العملية الجديدة: {1}</system:String>
     <system:String x:Key="TaxReturnsFilterOverdue">المتأخرة فقط</system:String>
     <system:String x:Key="TaxReturnsTaxType">نوع الضريبة:</system:String>
     <system:String x:Key="TaxReturnsCompany">الشركة:</system:String>
@@ -501,6 +510,7 @@
     <system:String x:Key="CommonMoreDetails">بيانات إضافية</system:String>
     <system:String x:Key="CommonMoreActions">إجراءات أخرى</system:String>
     <system:String x:Key="CommonSearch">بحث</system:String>
+    <system:String x:Key="CommonClearFilters">مسح الفلاتر</system:String>
     <system:String x:Key="CommonLoading">جاري التحميل...</system:String>
     <system:String x:Key="CommonError">خطأ</system:String>
     <system:String x:Key="CommonWarning">تحذير</system:String>

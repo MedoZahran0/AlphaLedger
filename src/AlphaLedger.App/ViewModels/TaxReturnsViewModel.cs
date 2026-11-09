@@ -86,6 +86,7 @@ public partial class TaxReturnsViewModel : ObservableObject
     [ObservableProperty] private int _overdueCount;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _filterTaxType = string.Empty;
+    [ObservableProperty] private Guid? _filterEmployeeId;
     [ObservableProperty] private TaxReturnFilingStatus _filterStatus;
     [ObservableProperty] private bool _showOverdueOnly;
     [ObservableProperty] private Guid? _selectedCompanyId;
@@ -237,12 +238,19 @@ public partial class TaxReturnsViewModel : ObservableObject
     private bool MatchesFilter(TaxReturn r)
     {
         if (!string.IsNullOrWhiteSpace(SearchText) &&
-            !r.TaxType.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase) &&
-            !r.TaxPeriod.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase))
+            !Contains(r.TaxType, SearchText) &&
+            !Contains(r.TaxPeriod, SearchText) &&
+            !Contains(r.Company?.DisplayName, SearchText) &&
+            !Contains(r.Company?.Code, SearchText) &&
+            !Contains(r.FiscalYear?.YearLabel, SearchText) &&
+            !Contains(r.ResponsibleEmployee?.FullName, SearchText) &&
+            !Contains(r.OfficialReceiptNumber, SearchText))
             return false;
         if (!string.IsNullOrWhiteSpace(FilterTaxType) && !TaxTypeMatches(r.TaxType, FilterTaxType))
             return false;
         if (SelectedFilterStatus?.Value is TaxReturnFilingStatus status && GetEffectiveStatus(r) != status)
+            return false;
+        if (FilterEmployeeId.HasValue && r.ResponsibleEmployeeId != FilterEmployeeId)
             return false;
         if (SelectedFiscalYearId.HasValue && r.FiscalYearId != SelectedFiscalYearId)
             return false;
@@ -250,6 +258,9 @@ public partial class TaxReturnsViewModel : ObservableObject
             return false;
         return true;
     }
+
+    private static bool Contains(string? value, string searchText) =>
+        value?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true;
 
     [RelayCommand]
     public async Task FilterByStatusAsync(TaxReturnFilingStatus status)
@@ -427,6 +438,92 @@ public partial class TaxReturnsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task CreateOperationForSelectedReturnAsync()
+    {
+        if (SelectedItem is null)
+        {
+            _dialogs.Warning(Text("TaxReturnsSelectFirst"));
+            return;
+        }
+        var selectedReturn = SelectedItem;
+        if (selectedReturn.RelatedOperationId.HasValue)
+        {
+            _dialogs.Warning(Text("TaxReturnsOperationAlreadyLinked"));
+            return;
+        }
+
+        OfficeOperation? operation = null;
+        var linkSaved = false;
+        try
+        {
+            var taxTypeLabel = FindTaxTypeOption(selectedReturn.TaxType).Label;
+            operation = await _operationService.AddOperationAsync(new OfficeOperation
+            {
+                Id = Guid.NewGuid(),
+                CompanyId = selectedReturn.CompanyId,
+                FiscalYearId = selectedReturn.FiscalYearId,
+                ServiceCategory = Text("TaxReturnsTitle"),
+                Description = $"{taxTypeLabel} - {selectedReturn.TaxPeriod}",
+                TaxPeriod = selectedReturn.TaxPeriod,
+                AssignedEmployeeId = selectedReturn.ResponsibleEmployeeId,
+                DueDate = selectedReturn.FilingDueDate,
+                Status = OperationStatus.NotStarted,
+                Priority = OperationPriority.Medium,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+
+            await _taxReturnService.UpdateTaxReturnAsync(selectedReturn.Id, new TaxReturn
+            {
+                Id = selectedReturn.Id,
+                CompanyId = selectedReturn.CompanyId,
+                FiscalYearId = selectedReturn.FiscalYearId,
+                TaxType = selectedReturn.TaxType,
+                TaxPeriod = selectedReturn.TaxPeriod,
+                FilingDueDate = selectedReturn.FilingDueDate,
+                PreparationStatus = selectedReturn.PreparationStatus,
+                ReviewStatus = selectedReturn.ReviewStatus,
+                FilingStatus = selectedReturn.FilingStatus,
+                SubmissionDate = selectedReturn.SubmissionDate,
+                OfficialReceiptNumber = selectedReturn.OfficialReceiptNumber,
+                ResponsibleEmployeeId = selectedReturn.ResponsibleEmployeeId,
+                RelatedOperationId = operation.Id,
+                RelatedFeeId = selectedReturn.RelatedFeeId,
+                Notes = selectedReturn.Notes
+            });
+            linkSaved = true;
+
+            await LoadReferenceDataAsync();
+            await LoadTaxReturnsAsync();
+            await LoadOverdueAsync();
+            DataChanged?.Invoke();
+            StatusMessage = Text("TaxReturnsOperationCreated");
+        }
+        catch (Exception ex)
+        {
+            if (operation is not null && !linkSaved)
+            {
+                try
+                {
+                    var savedReturn = await _taxReturnService.GetTaxReturnAsync(selectedReturn.Id);
+                    if (savedReturn?.RelatedOperationId != operation.Id)
+                        await _operationService.DeleteOperationAsync(operation.Id);
+                }
+                catch (Exception cleanupException)
+                {
+                    _dialogs.Error(string.Format(
+                        LocalizationService.Instance.CurrentCulture,
+                        Text("TaxReturnsOperationLinkFailed"),
+                        ex.Message,
+                        cleanupException.Message));
+                    return;
+                }
+            }
+
+            _dialogs.Error(LocalizationService.Instance.TranslateMessage(ex.Message));
+        }
+    }
+
+    [RelayCommand]
     public async Task FilterTaxReturnsAsync()
     {
         await LoadTaxReturnsAsync();
@@ -439,6 +536,7 @@ public partial class TaxReturnsViewModel : ObservableObject
         FilterTaxType = string.Empty;
         SelectedFilterTaxTypeOption = null;
         SelectedFilterStatus = FilterStatusOptions[0];
+        FilterEmployeeId = null;
         ShowOverdueOnly = false;
         await LoadTaxReturnsAsync();
     }

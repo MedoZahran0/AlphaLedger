@@ -68,6 +68,9 @@ public partial class OfficeOperationsViewModel : ObservableObject
     [ObservableProperty] private Guid? _selectedCompanyId;
     [ObservableProperty] private Guid? _selectedFiscalYearId;
     [ObservableProperty] private Guid? _filterEmployeeId;
+    [ObservableProperty] private OperationPriority? _filterPriority;
+    [ObservableProperty] private DateOnly? _filterDueDateFrom;
+    [ObservableProperty] private DateOnly? _filterDueDateTo;
     [ObservableProperty] private OperationStatusOption? _selectedFilterStatusOption;
     [ObservableProperty] private OperationStatus _operationStatus = OperationStatus.NotStarted;
     [ObservableProperty] private OperationPriority _operationPriority = OperationPriority.Medium;
@@ -134,6 +137,13 @@ public partial class OfficeOperationsViewModel : ObservableObject
 
     private async Task LoadOperationsAsync()
     {
+        if (FilterDueDateFrom.HasValue && FilterDueDateTo.HasValue &&
+            FilterDueDateFrom.Value > FilterDueDateTo.Value)
+        {
+            _dialogs.Warning(Text("OperationsInvalidDateRange"));
+            return;
+        }
+
         Items.Clear();
         var ops = await _operationService.GetOperationsAsync(SelectedCompanyId);
         var yearOperations = ops.Where(operation =>
@@ -178,9 +188,14 @@ public partial class OfficeOperationsViewModel : ObservableObject
 
     private bool MatchesFilter(OfficeOperation op)
     {
+        var company = Companies.FirstOrDefault(item => item.Id == op.CompanyId);
         if (!string.IsNullOrWhiteSpace(SearchText) &&
-            !op.ServiceCategory.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase) &&
-            !op.Description.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase))
+            !Contains(op.ServiceCategory, SearchText) &&
+            !Contains(op.Description, SearchText) &&
+            !Contains(company?.DisplayName, SearchText) &&
+            !Contains(company?.Code, SearchText) &&
+            !Contains(op.AssignedEmployee?.FullName, SearchText) &&
+            !Contains(op.FiscalYear?.YearLabel, SearchText))
             return false;
         if (SelectedFilterStatusOption?.Value is OperationStatus status && op.Status != status)
             return false;
@@ -188,10 +203,19 @@ public partial class OfficeOperationsViewModel : ObservableObject
             return false;
         if (FilterEmployeeId.HasValue && op.AssignedEmployeeId != FilterEmployeeId)
             return false;
+        if (FilterPriority.HasValue && op.Priority != FilterPriority.Value)
+            return false;
+        if (FilterDueDateFrom.HasValue && (!op.DueDate.HasValue || op.DueDate.Value < FilterDueDateFrom.Value))
+            return false;
+        if (FilterDueDateTo.HasValue && (!op.DueDate.HasValue || op.DueDate.Value > FilterDueDateTo.Value))
+            return false;
         if (ShowOverdueOnly && (!op.DueDate.HasValue || op.DueDate.Value >= DateOnly.FromDateTime(DateTime.Today) || op.Status is OperationStatus.Completed or OperationStatus.Cancelled))
             return false;
         return true;
     }
+
+    private static bool Contains(string? value, string searchText) =>
+        value?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true;
 
     [RelayCommand]
     public async Task AddOperationAsync()
@@ -482,6 +506,9 @@ public partial class OfficeOperationsViewModel : ObservableObject
         SearchText = string.Empty;
         SelectedFilterStatusOption = FilterStatusOptions[0];
         FilterEmployeeId = null;
+        FilterPriority = null;
+        FilterDueDateFrom = null;
+        FilterDueDateTo = null;
         ShowOverdueOnly = false;
         await LoadOperationsAsync();
         await LoadOverdueAsync();

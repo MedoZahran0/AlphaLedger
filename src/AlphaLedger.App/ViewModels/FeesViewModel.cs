@@ -163,13 +163,12 @@ public partial class FeesViewModel : ObservableObject
             var companyId = SelectedCompanyId;
             var previousFeeId = SelectedFee?.Id;
             var fees = await _feeService.GetFeesAsync(companyId);
-            var yearFees = fees.Where(fee =>
-                !SelectedFiscalYearId.HasValue || fee.FiscalYearId == SelectedFiscalYearId).ToArray();
-            DraftCount = yearFees.Count(fee => fee.Status == FeeStatus.Draft);
-            AgreedCount = yearFees.Count(fee => fee.Status == FeeStatus.Agreed);
-            PartiallyCollectedCount = yearFees.Count(fee => fee.Status == FeeStatus.PartiallyCollected);
-            CollectedCount = yearFees.Count(fee => fee.Status == FeeStatus.Collected);
-            CancelledCount = yearFees.Count(fee => fee.Status == FeeStatus.Cancelled);
+            var summaryFees = fees.Where(MatchesNonStatusFilters).ToArray();
+            DraftCount = summaryFees.Count(fee => fee.Status == FeeStatus.Draft);
+            AgreedCount = summaryFees.Count(fee => fee.Status == FeeStatus.Agreed);
+            PartiallyCollectedCount = summaryFees.Count(fee => fee.Status == FeeStatus.PartiallyCollected);
+            CollectedCount = summaryFees.Count(fee => fee.Status == FeeStatus.Collected);
+            CancelledCount = summaryFees.Count(fee => fee.Status == FeeStatus.Cancelled);
             var collections = await _collectionService.GetCollectionsAsync(companyId);
             var collectionTotals = collections.Where(item => !item.IsReversed && item.FeeId.HasValue)
                 .GroupBy(item => item.FeeId!.Value)
@@ -205,9 +204,18 @@ public partial class FeesViewModel : ObservableObject
                 });
             }
 
-            TotalAgreedFees = await _feeService.GetTotalAgreedFeesAsync(companyId);
-            TotalCollected = await _feeService.GetTotalCollectedAsync(companyId);
-            OutstandingBalance = TotalAgreedFees - TotalCollected;
+            var payableFees = summaryFees
+                .Where(fee => fee.Status is not FeeStatus.Cancelled and not FeeStatus.Draft)
+                .ToArray();
+            var payableFeeIds = payableFees.Select(fee => fee.Id).ToHashSet();
+            TotalAgreedFees = payableFees.Sum(fee => fee.Amount);
+            TotalCollected = collections
+                .Where(collection => !collection.IsReversed &&
+                    collection.FeeId.HasValue &&
+                    payableFeeIds.Contains(collection.FeeId.Value))
+                .Sum(collection => collection.AmountReceived);
+            OutstandingBalance = payableFees.Sum(fee =>
+                fee.Amount - collectionTotals.GetValueOrDefault(fee.Id));
             SelectedFee = previousFeeId.HasValue
                 ? Items.FirstOrDefault(item => item.Id == previousFeeId.Value)
                 : Items.FirstOrDefault();
@@ -464,14 +472,32 @@ public partial class FeesViewModel : ObservableObject
     {
         if (SelectedStatusOption?.Value is FeeStatus status && fee.Status != status)
             return false;
+        return MatchesNonStatusFilters(fee);
+    }
+
+    private bool MatchesNonStatusFilters(Fee fee)
+    {
         if (SelectedFiscalYearId.HasValue && fee.FiscalYearId != SelectedFiscalYearId)
             return false;
         if (FilterFromDate.HasValue && fee.FeeDate < FilterFromDate.Value)
             return false;
         if (FilterToDate.HasValue && fee.FeeDate > FilterToDate.Value)
             return false;
-        return string.IsNullOrWhiteSpace(SearchText) || fee.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(SearchText))
+            return true;
+
+        var company = Companies.FirstOrDefault(item => item.Id == fee.CompanyId);
+        var operation = Operations.FirstOrDefault(item => item.Id == fee.OperationId);
+        return Contains(fee.Description, SearchText) ||
+            Contains(company?.DisplayName, SearchText) ||
+            Contains(company?.Code, SearchText) ||
+            Contains(operation?.ServiceCategory, SearchText) ||
+            Contains(operation?.Description, SearchText) ||
+            Contains(operation?.AssignedEmployee?.FullName, SearchText);
     }
+
+    private static bool Contains(string? value, string searchText) =>
+        value?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true;
 
     private async Task LoadFiscalYearsAsync()
     {

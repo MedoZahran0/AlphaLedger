@@ -311,6 +311,9 @@
     <system:String x:Key="OperationsOverdueCount">Overdue</system:String>
     <system:String x:Key="OperationsUpcomingCount">Due in 7 days</system:String>
     <system:String x:Key="OperationsEmployeeFilter">Assigned employee</system:String>
+    <system:String x:Key="OperationsDueDateFrom">Due date from</system:String>
+    <system:String x:Key="OperationsDueDateTo">Due date to</system:String>
+    <system:String x:Key="OperationsInvalidDateRange">The start date must be on or before the end date.</system:String>
 
     <!-- TAX RETURNS -->
     <system:String x:Key="TaxReturnsTitle">Tax Returns Management</system:String>
@@ -320,6 +323,12 @@
     <system:String x:Key="TaxReturnsSearch">Search:</system:String>
     <system:String x:Key="TaxReturnsFilterType">Tax Type:</system:String>
     <system:String x:Key="TaxReturnsFilterStatus">Filing Status:</system:String>
+    <system:String x:Key="TaxReturnsAll">All returns</system:String>
+    <system:String x:Key="TaxReturnsFilterEmployee">Responsible employee</system:String>
+    <system:String x:Key="TaxReturnsCreateOperation">Create linked operation</system:String>
+    <system:String x:Key="TaxReturnsOperationAlreadyLinked">This return is already linked to an operation.</system:String>
+    <system:String x:Key="TaxReturnsOperationCreated">An operation was created and linked to this return.</system:String>
+    <system:String x:Key="TaxReturnsOperationLinkFailed">Could not link the operation to the return. Error: {0}. The new operation could not be cleaned up: {1}</system:String>
     <system:String x:Key="TaxReturnsFilterOverdue">Overdue Only</system:String>
     <system:String x:Key="TaxReturnsTaxType">Tax Type:</system:String>
     <system:String x:Key="TaxReturnsCompany">Company:</system:String>
@@ -500,6 +509,7 @@
     <system:String x:Key="CommonMoreDetails">More details</system:String>
     <system:String x:Key="CommonMoreActions">More actions</system:String>
     <system:String x:Key="CommonSearch">Search</system:String>
+    <system:String x:Key="CommonClearFilters">Clear filters</system:String>
     <system:String x:Key="CommonLoading">Loading...</system:String>
     <system:String x:Key="CommonError">Error</system:String>
     <system:String x:Key="CommonWarning">Warning</system:String>

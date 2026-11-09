@@ -23,6 +23,7 @@
                 <TextBlock Text="{DynamicResource TaxReturnsTitle}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource NavyBrush}"/>
                 <TextBlock Text="{DynamicResource TaxReturnsSubtitle}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                 <WrapPanel Margin="0,6,0,0">
+                    <Button Style="{StaticResource SecondaryButtonStyle}" Command="{Binding ClearFilterCommand}" Margin="0,0,5,0"><StackPanel Orientation="Horizontal"><TextBlock Text="{DynamicResource TaxReturnsAll}"/><TextBlock Text="{Binding TotalCount, StringFormat=' ({0})'}" Margin="4,0,0,0"/></StackPanel></Button>
                     <Button Style="{StaticResource SecondaryButtonStyle}" Command="{Binding FilterByStatusCommand}" CommandParameter="{x:Static enums:TaxReturnFilingStatus.NotStarted}" Margin="0,0,5,0"><StackPanel Orientation="Horizontal"><TextBlock Text="{DynamicResource TaxReturnsStatusNotStarted}"/><TextBlock Text="{Binding NotStartedCount, StringFormat=' ({0})'}" Margin="4,0,0,0"/></StackPanel></Button>
                     <Button Style="{StaticResource SecondaryButtonStyle}" Command="{Binding FilterByStatusCommand}" CommandParameter="{x:Static enums:TaxReturnFilingStatus.InPreparation}" Margin="0,0,5,0"><StackPanel Orientation="Horizontal"><TextBlock Text="{DynamicResource TaxReturnsStatusInPreparation}"/><TextBlock Text="{Binding InPreparationCount, StringFormat=' ({0})'}" Margin="4,0,0,0"/></StackPanel></Button>
                     <Button Style="{StaticResource SecondaryButtonStyle}" Command="{Binding FilterByStatusCommand}" CommandParameter="{x:Static enums:TaxReturnFilingStatus.AwaitingReview}" Margin="0,0,5,0"><StackPanel Orientation="Horizontal"><TextBlock Text="{DynamicResource TaxReturnsStatusAwaitingReview}"/><TextBlock Text="{Binding AwaitingReviewCount, StringFormat=' ({0})'}" Margin="4,0,0,0"/></StackPanel></Button>
@@ -46,6 +47,9 @@
                       SelectedItem="{Binding SelectedFilterTaxTypeOption, Mode=TwoWay}" ToolTip="{DynamicResource TaxReturnsFilterType}" Margin="0,0,8,0"/>
             <ComboBox MinWidth="160" ItemsSource="{Binding FilterStatusOptions}" DisplayMemberPath="Label"
                       SelectedItem="{Binding SelectedFilterStatus, Mode=TwoWay}" Margin="0,0,8,0"/>
+            <ComboBox MinWidth="160" ItemsSource="{Binding Employees}" DisplayMemberPath="FullName"
+                      SelectedValuePath="Id" SelectedValue="{Binding FilterEmployeeId, Mode=TwoWay}"
+                      ToolTip="{DynamicResource TaxReturnsFilterEmployee}" Margin="0,0,8,0"/>
             <TextBox Width="160" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{DynamicResource TaxReturnsSearch}" Margin="0,0,8,0"/>
             <CheckBox Content="{DynamicResource TaxReturnsFilterOverdue}" IsChecked="{Binding ShowOverdueOnly}" VerticalAlignment="Center" Margin="0,0,8,0"/>
             <Button Content="{DynamicResource CommonSearch}" Command="{Binding FilterCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,8,0"/>
@@ -58,6 +62,7 @@
                   Margin="12" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{DynamicResource CompaniesHeaderName}" Binding="{Binding Company.DisplayName}" Width="*"/>
+                <DataGridTextColumn Header="{DynamicResource DashboardColumnCode}" Binding="{Binding Company.Code}" Width="85"/>
                 <DataGridTextColumn Header="{DynamicResource TaxReturnsFiscalYear}" Binding="{Binding FiscalYear.YearLabel}" Width="80"/>
                 <DataGridTextColumn Header="{DynamicResource TaxReturnsResponsibleEmployee}" Binding="{Binding ResponsibleEmployee.FullName}" Width="*"/>
                 <DataGridTextColumn Header="{DynamicResource TaxReturnsTaxType}" Binding="{Binding TaxType, Converter={StaticResource TaxTypeDisplayConverter}}" Width="*"/>
@@ -115,6 +120,7 @@
                         <Button Content="{DynamicResource TaxReturnsSubmit}" Command="{Binding MarkSubmittedCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
                         <Expander Header="{DynamicResource CommonMoreActions}" Margin="8,0,0,0" VerticalAlignment="Center">
                             <WrapPanel Margin="4,6,4,0">
+                                <Button Content="{DynamicResource TaxReturnsCreateOperation}" Command="{Binding CreateOperationForSelectedReturnCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
                                 <Button Content="{DynamicResource CommonDelete}" Command="{Binding DeleteTaxReturnCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
                                 <Button Content="{DynamicResource TaxReturnsAttachToArchive}" Command="{Binding AttachDocumentCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
                                 <Button Content="{DynamicResource ArchiveOpenOnDisk}" Command="{Binding OpenSelectedArchiveCommand}" Style="{StaticResource SecondaryButtonStyle}"/>

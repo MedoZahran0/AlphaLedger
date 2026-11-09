@@ -293,6 +293,17 @@ public class CompanyWorkflowTests
                 TaxPeriod = " 2026-Q1 ",
                 FilingDueDate = new DateOnly(2026, 4, 30)
             }));
+            taxReturn = await taxReturnService.UpdateTaxReturnAsync(taxReturn.Id, new TaxReturn
+            {
+                Id = taxReturn.Id,
+                CompanyId = taxReturn.CompanyId,
+                FiscalYearId = taxReturn.FiscalYearId,
+                TaxType = taxReturn.TaxType,
+                TaxPeriod = taxReturn.TaxPeriod,
+                FilingDueDate = taxReturn.FilingDueDate,
+                RelatedOperationId = operation.Id
+            });
+            Assert.Equal(operation.Id, taxReturn.RelatedOperationId);
             var nextFiscalYear = await companyService.AddFiscalYearAsync(company.Id, new FiscalYearEditModel
             {
                 YearLabel = "2027",

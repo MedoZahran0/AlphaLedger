@@ -43,10 +43,23 @@
                       SelectedValue="{Binding SelectedFiscalYearId, Mode=TwoWay}" ToolTip="{DynamicResource OperationsFiscalYear}" Margin="0,0,8,0"/>
             <TextBox Width="180" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ToolTip="{DynamicResource OperationsSearch}" Margin="0,0,8,0"/>
             <Button Content="{DynamicResource CommonRefresh}" Command="{Binding FilterOperationsCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,8,0"/>
+            <Button Content="{DynamicResource CommonClearFilters}" Command="{Binding ClearFilterCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0"/>
             <Expander Header="{DynamicResource CommonMoreFilters}" VerticalAlignment="Center">
               <WrapPanel Margin="4,8,4,0">
             <ComboBox MinWidth="150" ItemsSource="{Binding Employees}" DisplayMemberPath="FullName" SelectedValuePath="Id"
                       SelectedValue="{Binding FilterEmployeeId, Mode=TwoWay}" ToolTip="{DynamicResource OperationsEmployeeFilter}" Margin="0,0,8,0"/>
+            <ComboBox MinWidth="130" ItemsSource="{Binding OperationPriorities}" SelectedItem="{Binding FilterPriority, Mode=TwoWay}"
+                      ToolTip="{DynamicResource OperationsPriority}" Margin="0,0,8,0">
+                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Converter={StaticResource EnumToDisplayConverter}}"/></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                <TextBlock Text="{DynamicResource OperationsDueDateFrom}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <TextBox Width="92" Text="{Binding FilterDueDateFrom, UpdateSourceTrigger=PropertyChanged}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                <TextBlock Text="{DynamicResource OperationsDueDateTo}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <TextBox Width="92" Text="{Binding FilterDueDateTo, UpdateSourceTrigger=PropertyChanged}"/>
+            </StackPanel>
             <ComboBox MinWidth="150" ItemsSource="{Binding FilterStatusOptions}" DisplayMemberPath="Label" SelectedItem="{Binding SelectedFilterStatusOption, Mode=TwoWay}"
                       ToolTip="{DynamicResource OperationsFilterStatus}" Margin="0,0,8,0">
             </ComboBox>
@@ -60,11 +73,13 @@
                   Margin="0,0,0,10" Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{DynamicResource CompaniesHeaderName}" Binding="{Binding Company.DisplayName}" Width="*"/>
+                <DataGridTextColumn Header="{DynamicResource DashboardColumnCode}" Binding="{Binding Company.Code}" Width="85"/>
                 <DataGridTextColumn Header="{DynamicResource TaxReturnsFiscalYear}" Binding="{Binding FiscalYear.YearLabel}" Width="80"/>
                 <DataGridTextColumn Header="{DynamicResource OperationsHeaderCategory}" Binding="{Binding ServiceCategory}" Width="*"/>
                 <DataGridTextColumn Header="{DynamicResource OperationsHeaderDescription}" Binding="{Binding Description}" Width="*"/>
                 <DataGridTextColumn Header="{DynamicResource OperationsAssignedEmployee}" Binding="{Binding AssignedEmployee.FullName}" Width="*"/>
                 <DataGridTextColumn Header="{DynamicResource OperationsDueDate}" Binding="{Binding DueDate, StringFormat='{}{0:d}'}" Width="110"/>
+                <DataGridTextColumn Header="{DynamicResource OperationsPriority}" Binding="{Binding Priority, Converter={StaticResource EnumToDisplayConverter}}" Width="90"/>
                 <DataGridTextColumn Header="{DynamicResource OperationsStatus}" Binding="{Binding Status, Converter={StaticResource EnumToDisplayConverter}}" Width="130"/>
             </DataGrid.Columns>
         </DataGrid>
