@@ -86,6 +86,7 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+
     [RelayCommand]
     public async Task LoadAsync()
     {

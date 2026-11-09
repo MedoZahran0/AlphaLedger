@@ -291,6 +291,10 @@
     <system:String x:Key="OperationsStatusSubmitted">تم التقديم / التسليم</system:String>
     <system:String x:Key="OperationsStatusCompleted">مكتمل</system:String>
     <system:String x:Key="OperationsStatusCancelled">ملغي</system:String>
+    <system:String x:Key="OperationsCreateFee">إنشاء أتعاب</system:String>
+    <system:String x:Key="OperationsFeeAmountRequired">أدخل أتعابًا متفقًا عليها أكبر من صفر أولًا.</system:String>
+    <system:String x:Key="OperationsFeeAlreadyCreated">توجد أتعاب مرتبطة بهذه العملية بالفعل.</system:String>
+    <system:String x:Key="OperationsFeeCreated">تم إنشاء الأتعاب وربطها بهذه العملية.</system:String>
     <system:String x:Key="OperationsOverdue">متأخر</system:String>
     <system:String x:Key="OperationsNoOverdue">لا توجد عمليات متأخرة</system:String>
     <system:String x:Key="OperationsHistory">تاريخ العملية</system:String>

@@ -22,7 +22,14 @@ public sealed class TaxReturnService : ITaxReturnService
 
     public async Task<IReadOnlyList<TaxReturn>> GetTaxReturnsAsync(Guid? companyId = null, CancellationToken cancellationToken = default)
     {
-        var query = _db.TaxReturns.AsNoTracking().AsQueryable();
+        var query = _db.TaxReturns
+            .AsNoTracking()
+            .Include(taxReturn => taxReturn.Company)
+            .Include(taxReturn => taxReturn.FiscalYear)
+            .Include(taxReturn => taxReturn.ResponsibleEmployee)
+            .Include(taxReturn => taxReturn.RelatedOperation)
+            .Include(taxReturn => taxReturn.RelatedFee)
+            .AsQueryable();
         if (companyId.HasValue)
             query = query.Where(t => t.CompanyId == companyId.Value);
         return await query.OrderByDescending(t => t.CreatedAtUtc).ToListAsync(cancellationToken);
@@ -35,6 +42,7 @@ public sealed class TaxReturnService : ITaxReturnService
 
     public async Task<TaxReturn> AddTaxReturnAsync(TaxReturn taxReturn, CancellationToken cancellationToken = default)
     {
+        NormalizeReturn(taxReturn);
         await ValidateReturnAsync(taxReturn, excludedId: null, cancellationToken);
         var now = _clock.UtcNow;
         taxReturn.CreatedAtUtc = taxReturn.CreatedAtUtc == default ? now : taxReturn.CreatedAtUtc;
@@ -51,6 +59,9 @@ public sealed class TaxReturnService : ITaxReturnService
     {
         var existing = await _db.TaxReturns.FirstOrDefaultAsync(t => t.Id == id, cancellationToken)
             ?? throw new BusinessException("Tax return not found.");
+        if (taxReturn.CompanyId != existing.CompanyId)
+            throw new BusinessException("A tax return cannot be moved to another company.");
+        NormalizeReturn(taxReturn);
         await ValidateReturnAsync(taxReturn, id, cancellationToken);
 
         existing.FiscalYearId = taxReturn.FiscalYearId;
@@ -89,6 +100,11 @@ public sealed class TaxReturnService : ITaxReturnService
         var today = _clock.TodayLocal;
         return await _db.TaxReturns
             .AsNoTracking()
+            .Include(taxReturn => taxReturn.Company)
+            .Include(taxReturn => taxReturn.FiscalYear)
+            .Include(taxReturn => taxReturn.ResponsibleEmployee)
+            .Include(taxReturn => taxReturn.RelatedOperation)
+            .Include(taxReturn => taxReturn.RelatedFee)
             .Where(t => t.FilingDueDate < today && t.FilingStatus != TaxReturnFilingStatus.Submitted)
             .OrderBy(t => t.FilingDueDate)
             .ToListAsync(cancellationToken);
@@ -101,7 +117,7 @@ public sealed class TaxReturnService : ITaxReturnService
 
         tr.FilingStatus = TaxReturnFilingStatus.Submitted;
         tr.SubmissionDate = _clock.TodayLocal;
-        tr.OfficialReceiptNumber = receiptNumber;
+        tr.OfficialReceiptNumber = string.IsNullOrWhiteSpace(receiptNumber) ? null : receiptNumber.Trim();
         tr.UpdatedAtUtc = _clock.UtcNow;
 
         await _db.SaveChangesAsync(cancellationToken);
@@ -122,9 +138,53 @@ public sealed class TaxReturnService : ITaxReturnService
                 cancellationToken))
             throw new BusinessException("The selected fiscal year does not belong to this company.");
 
+        var normalizedTaxType = taxReturn.TaxType.ToLowerInvariant();
+        var normalizedPeriod = taxReturn.TaxPeriod.ToLowerInvariant();
         if (await _db.TaxReturns.AnyAsync(item => item.Id != excludedId &&
-                item.CompanyId == taxReturn.CompanyId && item.TaxType == taxReturn.TaxType && item.TaxPeriod == taxReturn.TaxPeriod,
+                item.CompanyId == taxReturn.CompanyId &&
+                item.FiscalYearId == taxReturn.FiscalYearId &&
+                item.TaxType.ToLower() == normalizedTaxType &&
+                item.TaxPeriod.ToLower() == normalizedPeriod,
                 cancellationToken))
-            throw new BusinessException("A tax return for this type and period already exists for the company.");
+            throw new BusinessException("A tax return for this type, period, and fiscal year already exists for the company.");
+
+        if (taxReturn.ResponsibleEmployeeId.HasValue &&
+            !await _db.Employees.AnyAsync(employee => employee.Id == taxReturn.ResponsibleEmployeeId.Value, cancellationToken))
+            throw new BusinessException("The selected responsible employee was not found.");
+        if (taxReturn.RelatedOperationId.HasValue)
+        {
+            var operation = await _db.Operations.FirstOrDefaultAsync(item =>
+                item.Id == taxReturn.RelatedOperationId.Value && item.CompanyId == taxReturn.CompanyId,
+                cancellationToken);
+            if (operation is null)
+                throw new BusinessException("The selected operation does not belong to this company.");
+            if (taxReturn.FiscalYearId.HasValue && operation.FiscalYearId.HasValue &&
+                operation.FiscalYearId != taxReturn.FiscalYearId)
+                throw new BusinessException("The selected operation belongs to a different fiscal year.");
+        }
+        if (taxReturn.RelatedFeeId.HasValue)
+        {
+            var fee = await _db.Fees.FirstOrDefaultAsync(item =>
+                item.Id == taxReturn.RelatedFeeId.Value && item.CompanyId == taxReturn.CompanyId,
+                cancellationToken);
+            if (fee is null)
+                throw new BusinessException("The selected fee does not belong to this company.");
+            if (taxReturn.FiscalYearId.HasValue && fee.FiscalYearId.HasValue &&
+                fee.FiscalYearId != taxReturn.FiscalYearId)
+                throw new BusinessException("The selected fee belongs to a different fiscal year.");
+            if (taxReturn.RelatedOperationId.HasValue && fee.OperationId.HasValue &&
+                fee.OperationId != taxReturn.RelatedOperationId)
+                throw new BusinessException("The selected fee is linked to a different operation.");
+        }
+    }
+
+    private static void NormalizeReturn(TaxReturn taxReturn)
+    {
+        taxReturn.TaxType = taxReturn.TaxType.Trim();
+        taxReturn.TaxPeriod = taxReturn.TaxPeriod.Trim();
+        taxReturn.OfficialReceiptNumber = string.IsNullOrWhiteSpace(taxReturn.OfficialReceiptNumber)
+            ? null
+            : taxReturn.OfficialReceiptNumber.Trim();
+        taxReturn.Notes = string.IsNullOrWhiteSpace(taxReturn.Notes) ? null : taxReturn.Notes.Trim();
     }
 }

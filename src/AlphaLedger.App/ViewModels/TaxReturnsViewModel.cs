@@ -15,6 +15,8 @@ public partial class TaxReturnsViewModel : ObservableObject
 {
     private readonly ITaxReturnService _taxReturnService;
     private readonly ICompanyService _companyService;
+    private readonly IOperationService _operationService;
+    private readonly IFeeService _feeService;
     private readonly IArchiveAttachmentService _attachmentService;
     private readonly ICompanyArchiveService _archiveService;
     private readonly WindowsDialogService _dialogs;
@@ -26,6 +28,8 @@ public partial class TaxReturnsViewModel : ObservableObject
     public TaxReturnsViewModel(
         ITaxReturnService taxReturnService,
         ICompanyService companyService,
+        IOperationService operationService,
+        IFeeService feeService,
         IArchiveAttachmentService attachmentService,
         ICompanyArchiveService archiveService,
         WindowsDialogService dialogs,
@@ -34,6 +38,8 @@ public partial class TaxReturnsViewModel : ObservableObject
     {
         _taxReturnService = taxReturnService;
         _companyService = companyService;
+        _operationService = operationService;
+        _feeService = feeService;
         _attachmentService = attachmentService;
         _archiveService = archiveService;
         _dialogs = dialogs;
@@ -50,7 +56,8 @@ public partial class TaxReturnsViewModel : ObservableObject
             new("WithholdingTax", Text("TaxReturnsTypeWithholding")),
             new("PayrollTax", Text("TaxReturnsTypePayroll"))
         };
-        FilingStatuses = new ObservableCollection<TaxReturnFilingStatus>(Enum.GetValues<TaxReturnFilingStatus>());
+        FilingStatuses = new ObservableCollection<TaxReturnFilingStatus>(
+            Enum.GetValues<TaxReturnFilingStatus>().Where(status => status != TaxReturnFilingStatus.Overdue));
         FilterStatusOptions = new ObservableCollection<TaxReturnStatusOption>(
             new[] { new TaxReturnStatusOption(null, Text("CommonAll")) }
                 .Concat(Enum.GetValues<TaxReturnFilingStatus>().Select(status => new TaxReturnStatusOption(status, GetStatusText(status)))));
@@ -61,12 +68,22 @@ public partial class TaxReturnsViewModel : ObservableObject
     public ObservableCollection<TaxReturn> OverdueItems { get; } = [];
     public ObservableCollection<CompanyListItem> Companies { get; } = [];
     public ObservableCollection<CompanyFiscalYear> FiscalYears { get; } = [];
+    public ObservableCollection<Employee> Employees { get; } = [];
+    public ObservableCollection<OfficeOperation> Operations { get; } = [];
+    public ObservableCollection<Fee> Fees { get; } = [];
     public ObservableCollection<TaxTypeOption> TaxTypes { get; }
     public ObservableCollection<TaxReturnFilingStatus> FilingStatuses { get; }
     public ObservableCollection<TaxReturnStatusOption> FilterStatusOptions { get; }
 
     [ObservableProperty] private string? _statusMessage;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private int _notStartedCount;
+    [ObservableProperty] private int _inPreparationCount;
+    [ObservableProperty] private int _awaitingReviewCount;
+    [ObservableProperty] private int _readyToFileCount;
+    [ObservableProperty] private int _submittedCount;
+    [ObservableProperty] private int _overdueCount;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _filterTaxType = string.Empty;
     [ObservableProperty] private TaxReturnFilingStatus _filterStatus;
@@ -110,6 +127,7 @@ public partial class TaxReturnsViewModel : ObservableObject
             if (SelectedCompanyId is null && Companies.Count > 0)
                 SelectedCompanyId = Companies[0].Id;
             await LoadFiscalYearsAsync();
+            await LoadReferenceDataAsync();
             if (SelectedTaxTypeOption is null && TaxTypes.Count > 0)
                 SelectedTaxTypeOption = TaxTypes[0];
             if (FilterStatusOptions.Count > 0 && SelectedFilterStatus is null)
@@ -136,11 +154,69 @@ public partial class TaxReturnsViewModel : ObservableObject
     {
         Items.Clear();
         var returns = await _taxReturnService.GetTaxReturnsAsync(SelectedCompanyId);
-        foreach (var r in returns)
+        var yearReturns = returns.Where(item =>
+            !SelectedFiscalYearId.HasValue || item.FiscalYearId == SelectedFiscalYearId).ToArray();
+        foreach (var taxReturn in yearReturns)
+            taxReturn.EffectiveFilingStatus = GetEffectiveStatus(taxReturn);
+        UpdateStatusCounts(yearReturns);
+        foreach (var r in yearReturns)
         {
             if (MatchesFilter(r))
                 Items.Add(r);
         }
+    }
+
+    private void UpdateStatusCounts(IEnumerable<TaxReturn> returns)
+    {
+        var allReturns = returns.ToArray();
+        TotalCount = allReturns.Length;
+        NotStartedCount = allReturns.Count(item => GetEffectiveStatus(item) == TaxReturnFilingStatus.NotStarted);
+        InPreparationCount = allReturns.Count(item => GetEffectiveStatus(item) == TaxReturnFilingStatus.InPreparation);
+        AwaitingReviewCount = allReturns.Count(item => GetEffectiveStatus(item) == TaxReturnFilingStatus.AwaitingReview);
+        ReadyToFileCount = allReturns.Count(item => GetEffectiveStatus(item) == TaxReturnFilingStatus.ReadyToFile);
+        SubmittedCount = allReturns.Count(item => GetEffectiveStatus(item) == TaxReturnFilingStatus.Submitted);
+        OverdueCount = allReturns.Count(item => GetEffectiveStatus(item) == TaxReturnFilingStatus.Overdue);
+    }
+
+    private static TaxReturnFilingStatus GetEffectiveStatus(TaxReturn taxReturn)
+    {
+        if (taxReturn.FilingStatus == TaxReturnFilingStatus.Submitted)
+            return TaxReturnFilingStatus.Submitted;
+        return taxReturn.FilingDueDate < DateOnly.FromDateTime(DateTime.Today)
+            ? TaxReturnFilingStatus.Overdue
+            : taxReturn.FilingStatus == TaxReturnFilingStatus.Overdue
+                ? TaxReturnFilingStatus.NotStarted
+                : taxReturn.FilingStatus;
+    }
+
+    private async Task LoadReferenceDataAsync()
+    {
+        Employees.Clear();
+        Operations.Clear();
+        Fees.Clear();
+        if (SelectedCompanyId is not Guid companyId)
+        {
+            ResponsibleEmployeeId = null;
+            RelatedOperationId = null;
+            RelatedFeeId = null;
+            return;
+        }
+
+        foreach (var employee in await _companyService.GetActiveEmployeesAsync())
+            Employees.Add(employee);
+        foreach (var operation in (await _operationService.GetOperationsAsync(companyId))
+                     .Where(item => !SelectedFiscalYearId.HasValue || item.FiscalYearId == SelectedFiscalYearId))
+            Operations.Add(operation);
+        foreach (var fee in (await _feeService.GetFeesAsync(companyId))
+                     .Where(item => !SelectedFiscalYearId.HasValue || item.FiscalYearId == SelectedFiscalYearId))
+            Fees.Add(fee);
+
+        if (ResponsibleEmployeeId.HasValue && !Employees.Any(item => item.Id == ResponsibleEmployeeId.Value))
+            ResponsibleEmployeeId = null;
+        if (RelatedOperationId.HasValue && !Operations.Any(item => item.Id == RelatedOperationId.Value))
+            RelatedOperationId = null;
+        if (RelatedFeeId.HasValue && !Fees.Any(item => item.Id == RelatedFeeId.Value))
+            RelatedFeeId = null;
     }
 
     private async Task LoadOverdueAsync()
@@ -149,8 +225,12 @@ public partial class TaxReturnsViewModel : ObservableObject
         var overdue = await _taxReturnService.GetOverdueTaxReturnsAsync();
         foreach (var r in overdue)
         {
-            if (SelectedCompanyId is null || r.CompanyId == SelectedCompanyId)
+            if ((SelectedCompanyId is null || r.CompanyId == SelectedCompanyId) &&
+                (!SelectedFiscalYearId.HasValue || r.FiscalYearId == SelectedFiscalYearId))
+            {
+                r.EffectiveFilingStatus = GetEffectiveStatus(r);
                 OverdueItems.Add(r);
+            }
         }
     }
 
@@ -162,13 +242,22 @@ public partial class TaxReturnsViewModel : ObservableObject
             return false;
         if (!string.IsNullOrWhiteSpace(FilterTaxType) && !TaxTypeMatches(r.TaxType, FilterTaxType))
             return false;
-        if (SelectedFilterStatus?.Value is TaxReturnFilingStatus status && r.FilingStatus != status)
+        if (SelectedFilterStatus?.Value is TaxReturnFilingStatus status && GetEffectiveStatus(r) != status)
             return false;
         if (SelectedFiscalYearId.HasValue && r.FiscalYearId != SelectedFiscalYearId)
             return false;
-        if (ShowOverdueOnly && (r.FilingStatus == TaxReturnFilingStatus.Submitted || r.FilingDueDate >= DateOnly.FromDateTime(DateTime.Today)))
+        if (ShowOverdueOnly && GetEffectiveStatus(r) != TaxReturnFilingStatus.Overdue)
             return false;
         return true;
+    }
+
+    [RelayCommand]
+    public async Task FilterByStatusAsync(TaxReturnFilingStatus status)
+    {
+        ShowOverdueOnly = status == TaxReturnFilingStatus.Overdue;
+        SelectedFilterStatus = FilterStatusOptions.FirstOrDefault(option => option.Value == status)
+            ?? FilterStatusOptions[0];
+        await LoadTaxReturnsAsync();
     }
 
     [RelayCommand]
@@ -418,6 +507,7 @@ public partial class TaxReturnsViewModel : ObservableObject
     public async Task FilterAsync()
     {
         await LoadFiscalYearsAsync();
+        await LoadReferenceDataAsync();
         await LoadTaxReturnsAsync();
         await LoadOverdueAsync();
     }
@@ -495,6 +585,7 @@ public partial class TaxReturnsViewModel : ObservableObject
         try
         {
             await LoadFiscalYearsAsync();
+            await LoadReferenceDataAsync();
             await LoadTaxReturnsAsync();
             await LoadOverdueAsync();
         }
@@ -514,6 +605,18 @@ public partial class TaxReturnsViewModel : ObservableObject
     }
 
     private static string Text(string key) => LocalizationService.Instance.GetString(key);
+
+    partial void OnRelatedOperationIdChanged(Guid? value)
+    {
+        if (value is not Guid operationId)
+            return;
+        var operation = Operations.FirstOrDefault(item => item.Id == operationId);
+        if (operation?.FiscalYearId is Guid fiscalYearId)
+            SelectedFiscalYearId = fiscalYearId;
+        var matchingFee = Fees.FirstOrDefault(item => item.OperationId == operationId);
+        if (matchingFee is not null)
+            RelatedFeeId = matchingFee.Id;
+    }
 
     [RelayCommand]
     public void OpenSelectedCompany()

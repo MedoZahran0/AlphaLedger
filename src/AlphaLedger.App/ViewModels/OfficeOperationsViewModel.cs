@@ -14,6 +14,7 @@ namespace AlphaLedger.App.ViewModels;
 public partial class OfficeOperationsViewModel : ObservableObject
 {
     private readonly IOperationService _operationService;
+    private readonly IFeeService _feeService;
     private readonly ICompanyService _companyService;
     private readonly IArchiveAttachmentService _attachmentService;
     private readonly ICompanyArchiveService _archiveService;
@@ -25,6 +26,7 @@ public partial class OfficeOperationsViewModel : ObservableObject
 
     public OfficeOperationsViewModel(
         IOperationService operationService,
+        IFeeService feeService,
         ICompanyService companyService,
         IArchiveAttachmentService attachmentService,
         ICompanyArchiveService archiveService,
@@ -33,6 +35,7 @@ public partial class OfficeOperationsViewModel : ObservableObject
         Guid fiscalYearId = default)
     {
         _operationService = operationService;
+        _feeService = feeService;
         _companyService = companyService;
         _attachmentService = attachmentService;
         _archiveService = archiveService;
@@ -40,6 +43,11 @@ public partial class OfficeOperationsViewModel : ObservableObject
         _initialCompanyId = companyId == Guid.Empty ? null : companyId;
         SelectedCompanyId = _initialCompanyId;
         SelectedFiscalYearId = fiscalYearId == Guid.Empty ? null : fiscalYearId;
+        FilterStatusOptions = new ObservableCollection<OperationStatusOption>(
+            new[] { new OperationStatusOption(null, Text("CommonAll")) }
+                .Concat(Enum.GetValues<OperationStatus>()
+                    .Select(status => new OperationStatusOption(status, GetStatusText(status)))));
+        SelectedFilterStatusOption = FilterStatusOptions[0];
         LocalizationService.Instance.CultureChanged += OnCultureChanged;
     }
 
@@ -49,20 +57,29 @@ public partial class OfficeOperationsViewModel : ObservableObject
     public ObservableCollection<CompanyListItem> Companies { get; } = [];
     public ObservableCollection<Employee> Employees { get; } = [];
     public ObservableCollection<CompanyFiscalYear> FiscalYears { get; } = [];
+    public ObservableCollection<OperationStatusOption> FilterStatusOptions { get; }
     public ObservableCollection<OperationStatus> OperationStatuses { get; } = new(Enum.GetValues<OperationStatus>());
     public ObservableCollection<OperationPriority> OperationPriorities { get; } = new(Enum.GetValues<OperationPriority>());
 
     [ObservableProperty] private string? _statusMessage;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private string _searchText = string.Empty;
-    [ObservableProperty] private OperationStatus _filterStatus;
     [ObservableProperty] private bool _showOverdueOnly;
     [ObservableProperty] private Guid? _selectedCompanyId;
     [ObservableProperty] private Guid? _selectedFiscalYearId;
     [ObservableProperty] private Guid? _filterEmployeeId;
+    [ObservableProperty] private OperationStatusOption? _selectedFilterStatusOption;
     [ObservableProperty] private OperationStatus _operationStatus = OperationStatus.NotStarted;
     [ObservableProperty] private OperationPriority _operationPriority = OperationPriority.Medium;
     [ObservableProperty] private int _upcomingCount;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private int _notStartedCount;
+    [ObservableProperty] private int _inProgressCount;
+    [ObservableProperty] private int _waitingForDocumentsCount;
+    [ObservableProperty] private int _underReviewCount;
+    [ObservableProperty] private int _readyForDeliveryCount;
+    [ObservableProperty] private int _submittedCount;
+    [ObservableProperty] private int _completedCount;
 
     [ObservableProperty] private string _serviceCategory = string.Empty;
     [ObservableProperty] private string _description = string.Empty;
@@ -119,7 +136,17 @@ public partial class OfficeOperationsViewModel : ObservableObject
     {
         Items.Clear();
         var ops = await _operationService.GetOperationsAsync(SelectedCompanyId);
-        foreach (var op in ops)
+        var yearOperations = ops.Where(operation =>
+            !SelectedFiscalYearId.HasValue || operation.FiscalYearId == SelectedFiscalYearId).ToArray();
+        TotalCount = yearOperations.Length;
+        NotStartedCount = yearOperations.Count(operation => operation.Status == OperationStatus.NotStarted);
+        InProgressCount = yearOperations.Count(operation => operation.Status == OperationStatus.InProgress);
+        WaitingForDocumentsCount = yearOperations.Count(operation => operation.Status == OperationStatus.WaitingForDocuments);
+        UnderReviewCount = yearOperations.Count(operation => operation.Status == OperationStatus.UnderReview);
+        ReadyForDeliveryCount = yearOperations.Count(operation => operation.Status == OperationStatus.ReadyForDelivery);
+        SubmittedCount = yearOperations.Count(operation => operation.Status == OperationStatus.SubmittedOrDelivered);
+        CompletedCount = yearOperations.Count(operation => operation.Status == OperationStatus.Completed);
+        foreach (var op in yearOperations)
         {
             if (MatchesFilter(op))
                 Items.Add(op);
@@ -132,7 +159,8 @@ public partial class OfficeOperationsViewModel : ObservableObject
         var overdue = await _operationService.GetOverdueOperationsAsync();
         foreach (var op in overdue)
         {
-            if (SelectedCompanyId is null || op.CompanyId == SelectedCompanyId)
+            if ((SelectedCompanyId is null || op.CompanyId == SelectedCompanyId) &&
+                (!SelectedFiscalYearId.HasValue || op.FiscalYearId == SelectedFiscalYearId))
                 OverdueItems.Add(op);
         }
     }
@@ -154,7 +182,7 @@ public partial class OfficeOperationsViewModel : ObservableObject
             !op.ServiceCategory.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase) &&
             !op.Description.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase))
             return false;
-        if (FilterStatus != OperationStatus.NotStarted && op.Status != FilterStatus)
+        if (SelectedFilterStatusOption?.Value is OperationStatus status && op.Status != status)
             return false;
         if (SelectedFiscalYearId.HasValue && op.FiscalYearId != SelectedFiscalYearId)
             return false;
@@ -317,6 +345,7 @@ public partial class OfficeOperationsViewModel : ObservableObject
             _dialogs.Warning(Text("OperationsSelectFirst"));
             return;
         }
+
         try
         {
             var op = new OfficeOperation
@@ -361,6 +390,61 @@ public partial class OfficeOperationsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task FilterByStatusAsync(OperationStatus status)
+    {
+        SelectedFilterStatusOption = FilterStatusOptions.FirstOrDefault(option => option.Value == status);
+        ShowOverdueOnly = false;
+        await LoadOperationsAsync();
+        await LoadOverdueAsync();
+        await LoadUpcomingAsync();
+    }
+
+    [RelayCommand]
+    public async Task CreateFeeFromOperationAsync()
+    {
+        if (SelectedItem is null)
+        {
+            _dialogs.Warning(Text("OperationsSelectFirst"));
+            return;
+        }
+        if (SelectedItem.AgreedFee <= 0)
+        {
+            _dialogs.Warning(Text("OperationsFeeAmountRequired"));
+            return;
+        }
+
+        try
+        {
+            var fees = await _feeService.GetFeesAsync(SelectedItem.CompanyId);
+            if (fees.Any(fee => fee.OperationId == SelectedItem.Id && fee.Status != FeeStatus.Cancelled))
+            {
+                _dialogs.Warning(Text("OperationsFeeAlreadyCreated"));
+                return;
+            }
+
+            await _feeService.AddFeeAsync(new Fee
+            {
+                Id = Guid.NewGuid(),
+                CompanyId = SelectedItem.CompanyId,
+                FiscalYearId = SelectedItem.FiscalYearId,
+                OperationId = SelectedItem.Id,
+                Description = $"{SelectedItem.ServiceCategory} - {SelectedItem.Description}".Trim(' ', '-'),
+                FeeDate = DateOnly.FromDateTime(DateTime.Today),
+                DueDate = SelectedItem.DueDate,
+                Amount = SelectedItem.AgreedFee,
+                Currency = "EGP",
+                Status = FeeStatus.Agreed
+            });
+            StatusMessage = Text("OperationsFeeCreated");
+            DataChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _dialogs.Error(LocalizationService.Instance.TranslateMessage(ex.Message));
+        }
+    }
+
+    [RelayCommand]
     public void OpenSelectedCompany()
     {
         if (SelectedCompanyId is Guid companyId)
@@ -396,7 +480,7 @@ public partial class OfficeOperationsViewModel : ObservableObject
     public async Task ClearFilterAsync()
     {
         SearchText = string.Empty;
-        FilterStatus = OperationStatus.NotStarted;
+        SelectedFilterStatusOption = FilterStatusOptions[0];
         FilterEmployeeId = null;
         ShowOverdueOnly = false;
         await LoadOperationsAsync();
@@ -460,7 +544,22 @@ public partial class OfficeOperationsViewModel : ObservableObject
     {
         if (StatusMessage is not null)
             StatusMessage = LocalizationService.Instance.TranslateMessage(StatusMessage);
+        foreach (var option in FilterStatusOptions)
+            option.Label = option.Value is OperationStatus status ? GetStatusText(status) : Text("CommonAll");
     }
+
+    private string GetStatusText(OperationStatus status) => status switch
+    {
+        OperationStatus.NotStarted => Text("OperationsStatusNotStarted"),
+        OperationStatus.InProgress => Text("OperationsStatusInProgress"),
+        OperationStatus.WaitingForDocuments => Text("OperationsStatusWaitingDocuments"),
+        OperationStatus.UnderReview => Text("OperationsStatusUnderReview"),
+        OperationStatus.ReadyForDelivery => Text("OperationsStatusReadyForDelivery"),
+        OperationStatus.SubmittedOrDelivered => Text("OperationsStatusSubmitted"),
+        OperationStatus.Completed => Text("OperationsStatusCompleted"),
+        OperationStatus.Cancelled => Text("OperationsStatusCancelled"),
+        _ => Text("CommonUnknown")
+    };
 
     partial void OnSelectedCompanyIdChanged(Guid? oldValue, Guid? newValue)
     {
@@ -480,6 +579,7 @@ public partial class OfficeOperationsViewModel : ObservableObject
             _companyReloadPending = true;
             return;
         }
+
         _ = ReloadCompanyDataAsync();
     }
 
@@ -509,4 +609,16 @@ public partial class OfficeOperationsViewModel : ObservableObject
     }
 
     private static string Text(string key) => LocalizationService.Instance.GetString(key);
+}
+
+public partial class OperationStatusOption : ObservableObject
+{
+    public OperationStatusOption(OperationStatus? value, string label)
+    {
+        Value = value;
+        Label = label;
+    }
+
+    public OperationStatus? Value { get; }
+    [ObservableProperty] private string _label;
 }

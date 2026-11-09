@@ -21,5 +21,6 @@ public class Fee
 
     public Company? Company { get; set; }
     public CompanyFiscalYear? FiscalYear { get; set; }
+    public OfficeOperation? Operation { get; set; }
     public ICollection<Collection> Collections { get; set; } = new List<Collection>();
 }

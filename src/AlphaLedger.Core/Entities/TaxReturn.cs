@@ -1,4 +1,5 @@
 using AlphaLedger.Core.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AlphaLedger.Core.Entities;
 
@@ -22,5 +23,11 @@ public class TaxReturn
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 
+    [NotMapped]
+    public TaxReturnFilingStatus EffectiveFilingStatus { get; set; }
     public Company? Company { get; set; }
+    public CompanyFiscalYear? FiscalYear { get; set; }
+    public Employee? ResponsibleEmployee { get; set; }
+    public OfficeOperation? RelatedOperation { get; set; }
+    public Fee? RelatedFee { get; set; }
 }

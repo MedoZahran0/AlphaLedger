@@ -23,4 +23,6 @@ public class OfficeOperation
     public string? Notes { get; set; }
 
     public Company? Company { get; set; }
+    public CompanyFiscalYear? FiscalYear { get; set; }
+    public Employee? AssignedEmployee { get; set; }
 }

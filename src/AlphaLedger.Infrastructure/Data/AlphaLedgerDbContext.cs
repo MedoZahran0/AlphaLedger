@@ -72,6 +72,14 @@ public class AlphaLedgerDbContext : DbContext
                 .WithMany(x => x.Operations)
                 .HasForeignKey(x => x.CompanyId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.FiscalYear)
+                .WithMany()
+                .HasForeignKey(x => x.FiscalYearId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.AssignedEmployee)
+                .WithMany()
+                .HasForeignKey(x => x.AssignedEmployeeId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(x => new { x.CompanyId, x.Status });
         });
 
@@ -88,6 +96,10 @@ public class AlphaLedgerDbContext : DbContext
             entity.HasOne(x => x.FiscalYear)
                 .WithMany()
                 .HasForeignKey(x => x.FiscalYearId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.Operation)
+                .WithMany()
+                .HasForeignKey(x => x.OperationId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -115,6 +127,22 @@ public class AlphaLedgerDbContext : DbContext
                 .WithMany(x => x.TaxReturns)
                 .HasForeignKey(x => x.CompanyId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.FiscalYear)
+                .WithMany()
+                .HasForeignKey(x => x.FiscalYearId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.ResponsibleEmployee)
+                .WithMany()
+                .HasForeignKey(x => x.ResponsibleEmployeeId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.RelatedOperation)
+                .WithMany()
+                .HasForeignKey(x => x.RelatedOperationId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(x => x.RelatedFee)
+                .WithMany()
+                .HasForeignKey(x => x.RelatedFeeId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(x => new { x.CompanyId, x.FilingDueDate });
         });
 

@@ -17,6 +17,7 @@ public partial class FeesViewModel : ObservableObject
     private readonly IFeeService _feeService;
     private readonly ICollectionService _collectionService;
     private readonly ICompanyService _companyService;
+    private readonly IOperationService _operationService;
     private readonly IArchiveAttachmentService _attachmentService;
     private readonly ICompanyArchiveService _archiveService;
     private readonly WindowsDialogService _dialogs;
@@ -25,11 +26,12 @@ public partial class FeesViewModel : ObservableObject
     private bool _companyReloadPending;
     private readonly Guid? _initialCompanyId;
 
-    public FeesViewModel(IFeeService feeService, ICollectionService collectionService, ICompanyService companyService, IArchiveAttachmentService attachmentService, ICompanyArchiveService archiveService, WindowsDialogService dialogs, Guid companyId = default, Guid fiscalYearId = default)
+    public FeesViewModel(IFeeService feeService, ICollectionService collectionService, ICompanyService companyService, IOperationService operationService, IArchiveAttachmentService attachmentService, ICompanyArchiveService archiveService, WindowsDialogService dialogs, Guid companyId = default, Guid fiscalYearId = default)
     {
         _feeService = feeService;
         _collectionService = collectionService;
         _companyService = companyService;
+        _operationService = operationService;
         _attachmentService = attachmentService;
         _archiveService = archiveService;
         _dialogs = dialogs;
@@ -43,6 +45,7 @@ public partial class FeesViewModel : ObservableObject
         Items = new ObservableCollection<FeeListItem>();
         Collections = new ObservableCollection<CollectionListItem>();
         Companies = new ObservableCollection<CompanyListItem>();
+        Operations = new ObservableCollection<OfficeOperation>();
 
         FilterStatuses = new ObservableCollection<FeeStatusOption>
         {
@@ -62,12 +65,31 @@ public partial class FeesViewModel : ObservableObject
         LocalizationService.Instance.CultureChanged += RefreshFilterLabels;
     }
 
+    private async Task LoadOperationsAsync()
+    {
+        Operations.Clear();
+        if (SelectedCompanyId is not Guid companyId)
+        {
+            SelectedOperationId = null;
+            return;
+        }
+
+        var operations = await _operationService.GetOperationsAsync(companyId);
+        foreach (var operation in operations.Where(operation =>
+                     !SelectedFiscalYearId.HasValue || operation.FiscalYearId == SelectedFiscalYearId))
+            Operations.Add(operation);
+
+        if (SelectedOperationId.HasValue && !Operations.Any(operation => operation.Id == SelectedOperationId.Value))
+            SelectedOperationId = null;
+    }
+
     public ObservableCollection<FeeListItem> Items { get; }
     public ObservableCollection<CollectionListItem> Collections { get; }
 
     [ObservableProperty] private FeeStatusOption? _selectedStatusOption;
     [ObservableProperty] private Guid? _selectedCompanyId;
     [ObservableProperty] private Guid? _selectedFiscalYearId;
+    [ObservableProperty] private Guid? _selectedOperationId;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private bool _showOnlyUncollected;
     [ObservableProperty] private DateOnly? _filterFromDate;
@@ -81,6 +103,11 @@ public partial class FeesViewModel : ObservableObject
     [ObservableProperty] private decimal _totalAgreedFees;
     [ObservableProperty] private decimal _totalCollected;
     [ObservableProperty] private decimal _outstandingBalance;
+    [ObservableProperty] private int _draftCount;
+    [ObservableProperty] private int _agreedCount;
+    [ObservableProperty] private int _partiallyCollectedCount;
+    [ObservableProperty] private int _collectedCount;
+    [ObservableProperty] private int _cancelledCount;
     [ObservableProperty] private string _description = string.Empty;
     [ObservableProperty] private decimal _amount;
     [ObservableProperty] private string _currency = "EGP";
@@ -99,6 +126,7 @@ public partial class FeesViewModel : ObservableObject
     public ObservableCollection<FeeStatusOption> FilterStatuses { get; }
     public ObservableCollection<FeeStatus> FeeStatuses { get; }
     public ObservableCollection<CompanyListItem> Companies { get; } = [];
+    public ObservableCollection<OfficeOperation> Operations { get; } = [];
     public ObservableCollection<CompanyFiscalYear> FiscalYears { get; } = [];
     public event Action<Guid>? OpenArchiveRequested;
     public event Action? DataChanged;
@@ -130,10 +158,18 @@ public partial class FeesViewModel : ObservableObject
                 SelectedCompanyId = Companies[0].Id;
 
             await LoadFiscalYearsAsync();
+            await LoadOperationsAsync();
 
             var companyId = SelectedCompanyId;
             var previousFeeId = SelectedFee?.Id;
             var fees = await _feeService.GetFeesAsync(companyId);
+            var yearFees = fees.Where(fee =>
+                !SelectedFiscalYearId.HasValue || fee.FiscalYearId == SelectedFiscalYearId).ToArray();
+            DraftCount = yearFees.Count(fee => fee.Status == FeeStatus.Draft);
+            AgreedCount = yearFees.Count(fee => fee.Status == FeeStatus.Agreed);
+            PartiallyCollectedCount = yearFees.Count(fee => fee.Status == FeeStatus.PartiallyCollected);
+            CollectedCount = yearFees.Count(fee => fee.Status == FeeStatus.Collected);
+            CancelledCount = yearFees.Count(fee => fee.Status == FeeStatus.Cancelled);
             var collections = await _collectionService.GetCollectionsAsync(companyId);
             var collectionTotals = collections.Where(item => !item.IsReversed && item.FeeId.HasValue)
                 .GroupBy(item => item.FeeId!.Value)
@@ -157,6 +193,9 @@ public partial class FeesViewModel : ObservableObject
                     Currency = fee.Currency,
                     FiscalYearId = fee.FiscalYearId,
                     FiscalYearLabel = fee.FiscalYearId is Guid fiscalYearId && fiscalYearNames.TryGetValue(fiscalYearId, out var label) ? label : null,
+                    OperationId = fee.OperationId,
+                    OperationDescription = Operations.FirstOrDefault(operation => operation.Id == fee.OperationId)?.Description,
+                    AssignedEmployeeName = Operations.FirstOrDefault(operation => operation.Id == fee.OperationId)?.AssignedEmployee?.FullName,
                     FeeDate = fee.FeeDate,
                     DueDate = fee.DueDate,
                     Status = fee.Status,
@@ -202,6 +241,7 @@ public partial class FeesViewModel : ObservableObject
         PaymentTerms = string.Empty;
         FeeStatus = FeeStatus.Agreed;
         FeeNotes = string.Empty;
+        SelectedOperationId = null;
     }
 
     [RelayCommand]
@@ -220,6 +260,7 @@ public partial class FeesViewModel : ObservableObject
         _editingFeeId = fee.Id;
         SelectedCompanyId = fee.CompanyId;
         SelectedFiscalYearId = fee.FiscalYearId;
+        SelectedOperationId = fee.OperationId;
         Description = fee.Description;
         Amount = fee.Amount;
         Currency = fee.Currency;
@@ -246,6 +287,7 @@ public partial class FeesViewModel : ObservableObject
                 Id = _editingFeeId ?? Guid.NewGuid(),
                 CompanyId = companyId,
                 FiscalYearId = SelectedFiscalYearId,
+                OperationId = SelectedOperationId,
                 Description = Description.Trim(),
                 Amount = Amount,
                 Currency = Currency.Trim(),
@@ -271,6 +313,13 @@ public partial class FeesViewModel : ObservableObject
         {
             _dialogs.Error(LocalizationService.Instance.TranslateMessage(ex.Message));
         }
+    }
+
+    [RelayCommand]
+    public async Task FilterByStatusAsync(FeeStatus status)
+    {
+        SelectedStatusOption = FilterStatuses.FirstOrDefault(option => option.Value == status);
+        await LoadAsync();
     }
 
     [RelayCommand]
@@ -539,6 +588,7 @@ public partial class FeesViewModel : ObservableObject
         SelectedFiscalYearId = null;
         SelectedFee = null;
         SelectedCollection = null;
+        SelectedOperationId = null;
         _editingFeeId = null;
         _editingCollectionId = null;
         Collections.Clear();

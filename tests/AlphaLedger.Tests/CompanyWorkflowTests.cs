@@ -278,8 +278,8 @@ public class CompanyWorkflowTests
                 Id = Guid.NewGuid(),
                 CompanyId = company.Id,
                 FiscalYearId = fiscalYear.Id,
-                TaxType = "VAT",
-                TaxPeriod = "2026-Q1",
+                TaxType = " vat ",
+                TaxPeriod = " 2026-Q1 ",
                 FilingDueDate = new DateOnly(2026, 4, 30),
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
@@ -289,10 +289,27 @@ public class CompanyWorkflowTests
                 Id = Guid.NewGuid(),
                 CompanyId = company.Id,
                 FiscalYearId = fiscalYear.Id,
-                TaxType = "VAT",
-                TaxPeriod = "2026-Q1",
+                TaxType = " vAt ",
+                TaxPeriod = " 2026-Q1 ",
                 FilingDueDate = new DateOnly(2026, 4, 30)
             }));
+            var nextFiscalYear = await companyService.AddFiscalYearAsync(company.Id, new FiscalYearEditModel
+            {
+                YearLabel = "2027",
+                StartDate = new DateOnly(2027, 1, 1),
+                EndDate = new DateOnly(2027, 12, 31),
+                Status = AlphaLedger.Core.Enums.FiscalYearStatus.Planned
+            });
+            var nextYearReturn = await taxReturnService.AddTaxReturnAsync(new TaxReturn
+            {
+                Id = Guid.NewGuid(),
+                CompanyId = company.Id,
+                FiscalYearId = nextFiscalYear.Id,
+                TaxType = " vat ",
+                TaxPeriod = "2026-Q1",
+                FilingDueDate = new DateOnly(2027, 4, 30)
+            });
+            Assert.Equal(nextFiscalYear.Id, nextYearReturn.FiscalYearId);
             await taxReturnService.MarkSubmittedAsync(taxReturn.Id, "TAX-RECEIPT-1");
             Assert.Equal(AlphaLedger.Core.Enums.TaxReturnFilingStatus.Submitted,
                 (await taxReturnService.GetTaxReturnAsync(taxReturn.Id))?.FilingStatus);
@@ -306,6 +323,7 @@ public class CompanyWorkflowTests
                 FeeDate = new DateOnly(2026, 1, 1),
                 Amount = 1000m,
                 Currency = "EGP",
+                OperationId = operation.Id,
                 Status = AlphaLedger.Core.Enums.FeeStatus.Agreed
             });
 
@@ -321,6 +339,13 @@ public class CompanyWorkflowTests
                 ReceiptNumber = "TST-REC-001"
             });
             Assert.Equal(400m, await collectionService.GetOutstandingBalanceAsync(fee.Id));
+            Assert.Equal(AlphaLedger.Core.Enums.FeeStatus.PartiallyCollected,
+                (await feeService.GetFeeAsync(fee.Id))?.Status);
+            await db.Fees
+                .Where(item => item.Id == fee.Id)
+                .ExecuteUpdateAsync(updates => updates.SetProperty(item => item.Status, AlphaLedger.Core.Enums.FeeStatus.Agreed));
+            Assert.Equal(AlphaLedger.Core.Enums.FeeStatus.PartiallyCollected,
+                Assert.Single(await feeService.GetFeesAsync(company.Id, AlphaLedger.Core.Enums.FeeStatus.PartiallyCollected)).Status);
 
             await Assert.ThrowsAsync<AlphaLedger.Core.Exceptions.BusinessException>(() => collectionService.AddCollectionAsync(new Collection
             {
@@ -343,9 +368,44 @@ public class CompanyWorkflowTests
                 ReceiptNumber = collection.ReceiptNumber
             }));
 
+            await Assert.ThrowsAsync<AlphaLedger.Core.Exceptions.BusinessException>(
+                () => collectionService.DeleteCollectionAsync(collection.Id));
+            await Assert.ThrowsAsync<AlphaLedger.Core.Exceptions.BusinessException>(
+                () => feeService.DeleteFeeAsync(fee.Id));
+
+            var feeWithReducedAmount = await feeService.GetFeeAsync(fee.Id);
+            Assert.NotNull(feeWithReducedAmount);
+            feeWithReducedAmount.Amount = 500m;
+            await Assert.ThrowsAsync<AlphaLedger.Core.Exceptions.BusinessException>(
+                () => feeService.UpdateFeeAsync(feeWithReducedAmount));
+
             await collectionService.ReverseCollectionAsync(collection.Id, "Incorrect amount entered");
             Assert.Equal(1000m, await collectionService.GetOutstandingBalanceAsync(fee.Id));
             Assert.Equal("Incorrect amount entered", (await collectionService.GetCollectionAsync(collection.Id))?.ReversalReason);
+            Assert.Equal(AlphaLedger.Core.Enums.FeeStatus.Agreed,
+                (await feeService.GetFeeAsync(fee.Id))?.Status);
+            await Assert.ThrowsAsync<AlphaLedger.Core.Exceptions.BusinessException>(
+                () => operationService.DeleteOperationAsync(operation.Id));
+
+            var finalCollection = await collectionService.AddCollectionAsync(new Collection
+            {
+                Id = Guid.NewGuid(),
+                CompanyId = company.Id,
+                FeeId = fee.Id,
+                CollectionDate = new DateOnly(2026, 2, 3),
+                AmountReceived = 1000m,
+                PaymentMethod = "Cash",
+                ReceiptNumber = "TST-REC-003"
+            });
+            Assert.Equal(AlphaLedger.Core.Enums.FeeStatus.Collected,
+                (await feeService.GetFeeAsync(fee.Id))?.Status);
+            Assert.False(await collectionService.CanCollectAsync(fee.Id, 1m));
+            Assert.False(finalCollection.IsReversed);
+            var collectedFee = await feeService.GetFeeAsync(fee.Id);
+            Assert.NotNull(collectedFee);
+            collectedFee.Status = AlphaLedger.Core.Enums.FeeStatus.Cancelled;
+            await Assert.ThrowsAsync<AlphaLedger.Core.Exceptions.BusinessException>(() =>
+                feeService.UpdateFeeAsync(collectedFee));
         }
         finally
         {

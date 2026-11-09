@@ -12,6 +12,9 @@ public class FeeListItem
     public string Description { get; set; } = string.Empty;
     public Guid? FiscalYearId { get; set; }
     public string? FiscalYearLabel { get; set; }
+    public Guid? OperationId { get; set; }
+    public string? OperationDescription { get; set; }
+    public string? AssignedEmployeeName { get; set; }
     public DateOnly FeeDate { get; set; }
     public decimal Amount { get; set; }
     public string Currency { get; set; } = "SAR";

@@ -291,6 +291,10 @@
     <system:String x:Key="OperationsStatusSubmitted">Submitted/Delivered</system:String>
     <system:String x:Key="OperationsStatusCompleted">Completed</system:String>
     <system:String x:Key="OperationsStatusCancelled">Cancelled</system:String>
+    <system:String x:Key="OperationsCreateFee">Create Fee</system:String>
+    <system:String x:Key="OperationsFeeAmountRequired">Enter an agreed fee greater than zero first.</system:String>
+    <system:String x:Key="OperationsFeeAlreadyCreated">A fee is already linked to this operation.</system:String>
+    <system:String x:Key="OperationsFeeCreated">Fee created and linked to this operation.</system:String>
     <system:String x:Key="OperationsOverdue">Overdue</system:String>
     <system:String x:Key="OperationsNoOverdue">No overdue operations</system:String>
     <system:String x:Key="OperationsHistory">Operation History</system:String>
