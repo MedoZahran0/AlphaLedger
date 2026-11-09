@@ -110,6 +110,7 @@ public partial class App : Application
                     services.AddSingleton<WindowsFolderPicker>();
                     services.AddSingleton<GitHubUpdateService>();
                     services.AddSingleton<ApplicationUpdateService>();
+                    services.AddSingleton<AppLockService>();
                     services.AddTransient<AppDataRelocationService>();
 
                     // ViewModels
@@ -191,12 +192,20 @@ public partial class App : Application
                 return;
             }
 
+            var passwordGate = new PasswordGateWindow(_host.Services.GetRequiredService<AppLockService>());
+            await passwordGate.InitializeAsync();
+            if (passwordGate.ShowDialog() != true)
+            {
+                Shutdown();
+                return;
+            }
+
             // Resolve and show the main window
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
-            ShowAppliedUpdateNotes(mainWindow, loc, e.Args);
+            ShowAppliedUpdateNotes(mainWindow, e.Args);
             await CheckForUpdatesAsync(mainWindow);
         }
         catch (Exception ex)
@@ -282,7 +291,6 @@ public partial class App : Application
 
     private static void ShowAppliedUpdateNotes(
         Window owner,
-        LocalizationService localization,
         IReadOnlyList<string> arguments)
     {
         if (arguments.Count != 1 || arguments[0] != "--update-applied")
@@ -290,43 +298,33 @@ public partial class App : Application
 
         try
         {
-            using var stream = typeof(App).Assembly.GetManifestResourceStream("AlphaLedger.App.UpdateNotes.json")
+            using var stream = typeof(App).Assembly.GetManifestResourceStream("AlphaLedger.App.UpdateNotes.md")
                 ?? throw new InvalidDataException("The update notes resource is missing.");
-            var notes = System.Text.Json.JsonSerializer.Deserialize<UpdateNotes>(stream)
-                ?? throw new InvalidDataException("The update notes resource is empty.");
-            var details = notes.Changes.Length == 0
-                ? localization.GetString("UpdateNotesNoDetails")
-                : string.Join(Environment.NewLine, notes.Changes.Select(change => $"• {change}"));
-            MessageBox.Show(
-                owner,
-                string.Format(
-                    localization.CurrentCulture,
-                    localization.GetString("UpdateNotesMessage"),
-                    notes.Version,
-                    details),
-                localization.GetString("UpdateNotesTitle"),
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            using var reader = new StreamReader(stream);
+            var changes = reader.ReadToEnd()
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Trim())
+                .Where(line => line.StartsWith("- ", StringComparison.Ordinal) ||
+                               line.StartsWith("* ", StringComparison.Ordinal) ||
+                               line.StartsWith("+ ", StringComparison.Ordinal))
+                .Select(line => line[2..].Trim())
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .ToArray();
+            new UpdateNotesWindow(GitHubUpdateService.GetCurrentVersion().ToString(), changes)
+            {
+                Owner = owner
+            }.ShowDialog();
         }
-        catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException)
         {
             LogUpdateError(ex);
-            MessageBox.Show(
-                owner,
-                localization.GetString("UpdateNotesNoDetails"),
-                localization.GetString("UpdateNotesTitle"),
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            new UpdateNotesWindow(
+                GitHubUpdateService.GetCurrentVersion().ToString(),
+                [])
+            {
+                Owner = owner
+            }.ShowDialog();
         }
-    }
-
-    private sealed class UpdateNotes
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("version")]
-        public string Version { get; init; } = string.Empty;
-
-        [System.Text.Json.Serialization.JsonPropertyName("changes")]
-        public string[] Changes { get; init; } = [];
     }
 
     private static void LogUpdateError(Exception exception)

@@ -19,6 +19,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IAppPaths _paths;
     private readonly AppDataRelocationService _relocation;
     private readonly ApplicationUpdateService _applicationUpdater;
+    private readonly AppLockService _appLockService;
 
     public SettingsViewModel(
         ISettingsService settings,
@@ -27,7 +28,8 @@ public partial class SettingsViewModel : ObservableObject
         WindowsDialogService dialogs,
         IAppPaths paths,
         AppDataRelocationService relocation,
-        ApplicationUpdateService applicationUpdater)
+        ApplicationUpdateService applicationUpdater,
+        AppLockService appLockService)
     {
         _settings = settings;
         _folders = folders;
@@ -36,6 +38,7 @@ public partial class SettingsViewModel : ObservableObject
         _paths = paths;
         _relocation = relocation;
         _applicationUpdater = applicationUpdater;
+        _appLockService = appLockService;
         DatabasePath = _paths.DatabasePath;
         AppDataPath = _paths.DataDirectory;
         LocalizationService.Instance.CultureChanged += OnCultureChanged;
@@ -50,6 +53,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _currentUserName = string.Empty;
     [ObservableProperty] private string _currentUserRole = string.Empty;
     [ObservableProperty] private string? _status;
+    [ObservableProperty] private string? _passwordStatus;
     [ObservableProperty] private string _updateStatus = string.Empty;
     [ObservableProperty] private bool _isCheckingForUpdates;
 
@@ -143,6 +147,37 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public async Task ChangePasswordAsync(string currentPassword, string newPassword, string confirmation)
+    {
+        PasswordStatus = null;
+        if (newPassword.Length < 8)
+        {
+            PasswordStatus = LocalizationService.Instance.GetString("SettingsPasswordTooShort");
+            return;
+        }
+
+        if (!string.Equals(newPassword, confirmation, StringComparison.Ordinal))
+        {
+            PasswordStatus = LocalizationService.Instance.GetString("SettingsPasswordsMismatch");
+            return;
+        }
+
+        try
+        {
+            if (!await _appLockService.ChangePasswordAsync(currentPassword, newPassword))
+            {
+                PasswordStatus = LocalizationService.Instance.GetString("SettingsCurrentPasswordIncorrect");
+                return;
+            }
+
+            PasswordStatus = LocalizationService.Instance.GetString("SettingsPasswordChanged");
+        }
+        catch (Exception ex)
+        {
+            _dialogs.Error(ex.Message);
+        }
+    }
+
     partial void OnSelectedLanguageChanged(string value)
     {
         LocalizationService.Instance.SetLanguage(value);
@@ -163,5 +198,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (Status is not null)
             Status = LocalizationService.Instance.TranslateMessage(Status);
+        if (PasswordStatus is not null)
+            PasswordStatus = LocalizationService.Instance.TranslateMessage(PasswordStatus);
     }
 }

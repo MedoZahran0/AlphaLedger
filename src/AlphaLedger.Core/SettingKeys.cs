@@ -8,4 +8,5 @@ public static class SettingKeys
     public const string SelectedLanguage = "SelectedLanguage";
     public const string CurrentUserName = "CurrentUserName";
     public const string CurrentUserRole = "CurrentUserRole";
+    public const string AppLockPasswordHash = "AppLockPasswordHash";
 }

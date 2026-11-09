@@ -107,6 +107,53 @@
                     </Border>
                 </Grid>
 
+                <Border Background="White" BorderBrush="{StaticResource BorderBrushKey}" BorderThickness="1" Padding="14" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource SettingsPasswordTitle}" FontSize="13.5"
+                                   FontWeight="SemiBold" Foreground="{StaticResource NavyBrush}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{DynamicResource SettingsPasswordDescription}" FontSize="11.5"
+                                   Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{DynamicResource SettingsCurrentPasswordLabel}" FontWeight="SemiBold"
+                                       FontSize="11.5" VerticalAlignment="Center"/>
+                            <PasswordBox x:Name="CurrentPasswordBox" Grid.Column="1" Height="29"
+                                         MaxWidth="360" HorizontalAlignment="Left" Padding="7,4"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{DynamicResource SettingsNewPasswordLabel}" FontWeight="SemiBold"
+                                       FontSize="11.5" VerticalAlignment="Center"/>
+                            <PasswordBox x:Name="NewPasswordBox" Grid.Column="1" Height="29"
+                                         MaxWidth="360" HorizontalAlignment="Left" Padding="7,4"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{DynamicResource SettingsConfirmPasswordLabel}" FontWeight="SemiBold"
+                                       FontSize="11.5" VerticalAlignment="Center"/>
+                            <PasswordBox x:Name="ConfirmNewPasswordBox" Grid.Column="1" Height="29"
+                                         MaxWidth="360" HorizontalAlignment="Left" Padding="7,4"/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="{DynamicResource SettingsChangePasswordButton}"
+                                    Style="{StaticResource SecondaryButtonStyle}" MinWidth="145"
+                                    Height="30" Click="ChangePassword_Click"/>
+                            <TextBlock Text="{Binding PasswordStatus}" FontSize="11.5"
+                                       Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap"
+                                       Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -164,6 +211,23 @@
                         </StackPanel>
                     </Border>
                 </Grid>
+
+                <Border Background="#10243E" BorderBrush="#1E3A5F" BorderThickness="1"
+                        Padding="16,12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource SettingsCopyright}" FontSize="12.5"
+                                   FontWeight="SemiBold" Foreground="White"/>
+                        <TextBlock Text="{DynamicResource SettingsContactTitle}" FontSize="11"
+                                   Foreground="#B0C4DE" Margin="0,4,0,6"/>
+                        <TextBlock FontSize="12.5">
+                            <Run Text="● " Foreground="#25D366"/>
+                            <Hyperlink NavigateUri="https://wa.me/201095247005"
+                                       RequestNavigate="WhatsAppLink_RequestNavigate">
+                                <Run Text="{DynamicResource SettingsWhatsAppContact}" Foreground="#7EE2A8"/>
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
     </Grid>
