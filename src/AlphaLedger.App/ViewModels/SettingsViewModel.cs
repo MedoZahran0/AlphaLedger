@@ -150,7 +150,7 @@ public partial class SettingsViewModel : ObservableObject
     public async Task ChangePasswordAsync(string currentPassword, string newPassword, string confirmation)
     {
         PasswordStatus = null;
-        if (newPassword.Length < 8)
+        if (newPassword.Length < 4)
         {
             PasswordStatus = LocalizationService.Instance.GetString("SettingsPasswordTooShort");
             return;

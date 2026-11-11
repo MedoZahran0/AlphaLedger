@@ -119,7 +119,7 @@ public sealed class AppLockService
 
     private static void ValidatePassword(string password)
     {
-        if (password.Length < 8)
-            throw new ArgumentException("The application password must contain at least 8 characters.", nameof(password));
+        if (password.Length < 4)
+            throw new ArgumentException("The application password must contain at least 4 characters.", nameof(password));
     }
 }

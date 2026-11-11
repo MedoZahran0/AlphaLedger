@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Navigation;
 using AlphaLedger.App.Localization;
 using AlphaLedger.App.Services;
 
@@ -7,8 +9,11 @@ namespace AlphaLedger.App.Views;
 
 public partial class PasswordGateWindow : Window
 {
+    private const int MinimumPasswordLength = 4;
+
     private readonly AppLockService _appLockService;
     private bool _isFirstRun;
+    private bool _isBusy;
 
     public PasswordGateWindow(AppLockService appLockService)
     {
@@ -18,9 +23,20 @@ public partial class PasswordGateWindow : Window
 
     public async Task InitializeAsync()
     {
-        _isFirstRun = !await _appLockService.IsPasswordConfiguredAsync();
+        try
+        {
+            _isFirstRun = !await _appLockService.IsPasswordConfiguredAsync();
+        }
+        catch
+        {
+            // If the stored state cannot be read, fall back to the login form so the
+            // user can retry instead of being stuck on a disabled screen.
+            _isFirstRun = false;
+        }
+
         if (_isFirstRun)
         {
+            TitleText.Text = LocalizationService.Instance.GetString("AppLockSetupTitle");
             SubtitleText.Text = LocalizationService.Instance.GetString("AppLockSetupSubtitle");
             ConfirmPanel.Visibility = Visibility.Visible;
             ContinueButton.Content = LocalizationService.Instance.GetString("AppLockSetupButton");
@@ -31,29 +47,54 @@ public partial class PasswordGateWindow : Window
 
     private async void ContinueButton_Click(object sender, RoutedEventArgs e)
     {
-        ErrorText.Visibility = Visibility.Collapsed;
-        try
+        if (_isBusy)
+            return;
+
+        HideError();
+
+        var password = PasswordInput.Password;
+
+        if (_isFirstRun)
         {
-            if (_isFirstRun)
+            if (password.Length < MinimumPasswordLength)
             {
-                if (PasswordInput.Password.Length < 8)
-                {
-                    ShowError("AppLockPasswordTooShort");
-                    return;
-                }
-
-                if (!string.Equals(PasswordInput.Password, ConfirmPasswordInput.Password, StringComparison.Ordinal))
-                {
-                    ShowError("AppLockPasswordsMismatch");
-                    return;
-                }
-
-                await _appLockService.ConfigurePasswordAsync(PasswordInput.Password);
-                DialogResult = true;
+                ShowError("AppLockPasswordTooShort");
+                PasswordInput.Focus();
                 return;
             }
 
-            if (!await _appLockService.VerifyPasswordAsync(PasswordInput.Password))
+            if (!string.Equals(password, ConfirmPasswordInput.Password, StringComparison.Ordinal))
+            {
+                ShowError("AppLockPasswordsMismatch");
+                ConfirmPasswordInput.Focus();
+                return;
+            }
+
+            SetBusy(true);
+            try
+            {
+                // Hashing (PBKDF2) and the database write run off the UI thread so the
+                // window always stays responsive, even on slow disks.
+                await Task.Run(() => _appLockService.ConfigurePasswordAsync(password));
+                DialogResult = true;
+            }
+            catch (Exception ex)
+            {
+                ShowError("AppLockSaveFailed", ex.Message);
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+
+            return;
+        }
+
+        SetBusy(true);
+        try
+        {
+            var isValid = await Task.Run(() => _appLockService.VerifyPasswordAsync(password));
+            if (!isValid)
             {
                 ShowError("AppLockIncorrectPassword");
                 PasswordInput.Clear();
@@ -65,8 +106,11 @@ public partial class PasswordGateWindow : Window
         }
         catch (Exception ex)
         {
-            ErrorText.Text = $"{LocalizationService.Instance.GetString("AppLockSaveFailed")} {ex.Message}";
-            ErrorText.Visibility = Visibility.Visible;
+            ShowError("AppLockSaveFailed", ex.Message);
+        }
+        finally
+        {
+            SetBusy(false);
         }
     }
 
@@ -79,9 +123,55 @@ public partial class PasswordGateWindow : Window
         ContinueButton_Click(sender, new RoutedEventArgs());
     }
 
-    private void ShowError(string resourceKey)
+    private void Window_KeyDown(object sender, KeyEventArgs e)
     {
-        ErrorText.Text = LocalizationService.Instance.GetString(resourceKey);
-        ErrorText.Visibility = Visibility.Visible;
+        if (e.Key != Key.Escape || _isBusy)
+            return;
+
+        e.Handled = true;
+        DialogResult = false;
+    }
+
+    private void WhatsAppLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                $"{LocalizationService.Instance.GetString("SettingsWhatsAppOpenFailed")} {ex.Message}",
+                Title,
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
+    private void SetBusy(bool isBusy)
+    {
+        _isBusy = isBusy;
+        ContinueButton.IsEnabled = !isBusy;
+        PasswordInput.IsEnabled = !isBusy;
+        ConfirmPasswordInput.IsEnabled = !isBusy;
+        ContinueButton.Content = LocalizationService.Instance.GetString(
+            isBusy
+                ? "AppLockWorking"
+                : _isFirstRun ? "AppLockSetupButton" : "AppLockLoginButton");
+    }
+
+    private void ShowError(string resourceKey, string? details = null)
+    {
+        var message = LocalizationService.Instance.GetString(resourceKey);
+        ErrorText.Text = string.IsNullOrWhiteSpace(details) ? message : $"{message} {details}";
+        ErrorPanel.Visibility = Visibility.Visible;
+    }
+
+    private void HideError()
+    {
+        ErrorText.Text = string.Empty;
+        ErrorPanel.Visibility = Visibility.Collapsed;
     }
 }
